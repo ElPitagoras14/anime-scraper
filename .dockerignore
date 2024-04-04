@@ -1,0 +1,26 @@
+# Ignorar node_modules
+node_modules
+
+# Ignorar archivos de log
+*.log
+
+# Ignorar directorios de tests
+tests
+
+# Ignorar el archivo .env
+.env
+
+# Ignorar archivos de configuración de desarrollo
+docker-compose*.yml
+
+# Ignorar archivos de configuración de Git
+.git
+.gitignore
+
+# Ignorar archivos de configuración de Docker
+Dockerfile
+
+# Ignorar otros archivos y directorios innecesarios
+.dockerignore
+.vscode
+*.md
