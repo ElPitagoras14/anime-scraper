@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Icons } from "./ui/icons";
+import { useSession } from "next-auth/react";
 
 interface EpisodeInfoProps {
   anime: string;
@@ -33,6 +34,8 @@ export const EpisodeInfo = ({
   title,
   imageSrc,
 }: EpisodeInfoProps) => {
+  const { data } = useSession();
+  const { user: { token = "" } = {} } = data || {};
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -61,8 +64,9 @@ export const EpisodeInfo = ({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
-      url: `${BACKEND_URL}/api/v1/anime/downloadlinks/single`,
+      url: `${BACKEND_URL}/api/v2/animes/downloadlinks/single`,
       params: {
         episode_id: episodeId,
         episode_link: streamingLink,
@@ -78,9 +82,16 @@ export const EpisodeInfo = ({
       .then((response) => {
         const {
           data: {
-            payload: { link },
+            payload: { downloadInfo: { link = "" } = {} },
           },
         } = response;
+        if (!link) {
+          toast({
+            title: "Error fetching download link",
+            description: `Episode ${episodeId}`,
+          });
+          return;
+        }
         toast({
           title: `Adding to download queue.`,
           description: `Episode ${episodeId}`,

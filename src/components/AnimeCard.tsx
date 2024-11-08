@@ -3,7 +3,7 @@
 import { Bookmark } from "lucide-react";
 import Image from "next/image";
 import { TypographyH5 } from "./ui/typography";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useToast } from "./ui/use-toast";
 import { useRouter } from "next/navigation";
 import {
@@ -34,12 +34,7 @@ export const AnimeCard = ({
   const router = useRouter();
 
   const [isSaved, setIsSaved] = useState<boolean>(saved);
-  const [showBookmark, setShowBookmark] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  useEffect(() => {
-    setShowBookmark(isSaved);
-  }, [isSaved]);
 
   const saveAnime = () => {
     setIsLoading(true);
@@ -48,7 +43,7 @@ export const AnimeCard = ({
       headers: {
         "Content-Type": "application/json",
       },
-      url: `${BACKEND_URL}/api/v1/anime/saved`,
+      url: `${BACKEND_URL}/api/v2/animes/saved`,
       data: {
         anime_id: animeId,
         name,
@@ -81,7 +76,7 @@ export const AnimeCard = ({
       headers: {
         "Content-Type": "application/json",
       },
-      url: `${BACKEND_URL}/api/v1/anime/saved/single/${animeId}`,
+      url: `${BACKEND_URL}/api/v2/animes/saved/single/${animeId}`,
     };
     axios(options)
       .then((response) => {
@@ -102,69 +97,60 @@ export const AnimeCard = ({
   };
 
   return (
-    <div
-      className="relative hover:cursor-pointer w-[200px] mb-4 mr-6"
-      onClick={() => {
-        router.push(`/anime/${animeId}`);
-      }}
-      onMouseEnter={() => {
-        if (!isSaved) {
-          setShowBookmark(true);
-        }
-      }}
-      onMouseLeave={() => {
-        if (!isSaved) {
-          setShowBookmark(false);
-        }
-      }}
-    >
-      <Image
-        src={imageSrc}
-        alt={""}
-        width={200}
-        height={200}
-        className="rounded-md"
-      ></Image>
+    <div className="flex flex-col mb-4 items-center">
       <div
-        className={`absolute top-0.5 end-0.5 pt-[0.3rem] px-[0.2rem] m-1 rounded-md ${
-          showBookmark ? "bg-[#020817]/80" : "hidden"
-        } hover:cursor-pointer`}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (isSaved) {
-            unsaveAnime();
-          } else {
-            saveAnime();
-          }
-          setIsSaved(!isSaved);
+        className="relative hover:cursor-pointer min-w-[120px] w-[20vw] lg:w-[20vw] lg:max-w-[180px] min-h-[200px] h-[30vw] lg:h-[30vw] lg:max-h-[250px] flex justify-center"
+        onClick={() => {
+          router.push(`/scraper/info/${animeId}`);
         }}
       >
-        <TooltipProvider>
-          <Tooltip>
-            {isLoading ? (
-              <Icons.spinner className="h-6 w-6 mb-1 animate-spin" />
-            ) : isSaved ? (
-              <>
-                <TooltipTrigger>
-                  <Bookmark
-                    fill="hsl(var(--primary))"
-                    className="h-6 w-6 text-primary"
-                  ></Bookmark>
-                </TooltipTrigger>
-                <TooltipContent>Remove from saved</TooltipContent>
-              </>
-            ) : (
-              <>
-                <TooltipTrigger>
-                  <Bookmark className="h-6 w-6 text-white"></Bookmark>
-                </TooltipTrigger>
-                <TooltipContent>Add to saved</TooltipContent>
-              </>
-            )}
-          </Tooltip>
-        </TooltipProvider>
+        <Image
+          src={imageSrc}
+          alt=""
+          layout="fill"
+          className="rounded-md object-cover"
+        />
+        {/* <div
+          className={`absolute top-0.5 end-0.5 pt-[0.3rem] px-[0.2rem] m-1 rounded-md bg-[#020817]/80`}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isSaved) {
+              unsaveAnime();
+            } else {
+              saveAnime();
+            }
+            setIsSaved(!isSaved);
+          }}
+        >
+          <TooltipProvider>
+            <Tooltip>
+              {isLoading ? (
+                <Icons.spinner className="h-5 lg:h-6 w-5 lg:w-6 mb-1 animate-spin" />
+              ) : isSaved ? (
+                <>
+                  <TooltipTrigger>
+                    <Bookmark
+                      fill="hsl(var(--primary))"
+                      className="h-5 lg:h-6 w-5 lg:w-6 text-primary"
+                    ></Bookmark>
+                  </TooltipTrigger>
+                  <TooltipContent>Remove from saved</TooltipContent>
+                </>
+              ) : (
+                <>
+                  <TooltipTrigger>
+                    <Bookmark className="h-5 lg:h-6 w-5 lg:w-6 text-white"></Bookmark>
+                  </TooltipTrigger>
+                  <TooltipContent>Add to saved</TooltipContent>
+                </>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div> */}
       </div>
-      <TypographyH5 className="text-center mt-4 text-wrap">{name}</TypographyH5>
+      <TypographyH5 className="text-center mt-4 text-wrap min-w-[120px] w-[20vw] lg:w-[20vw] lg:max-w-[180px]">
+        {name}
+      </TypographyH5>
     </div>
   );
 };

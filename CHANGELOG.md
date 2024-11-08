@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [2.0.0] - 2024-11-10
 
 ### Added
 
@@ -8,6 +8,10 @@
 - Administrator view to manage users and cache.
 - Change username, profile image and password.
 - UX improvements.
+
+### Changed
+
+- Rewriting of `README.md`
 
 ### Fixed
 

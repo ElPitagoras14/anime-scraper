@@ -3,7 +3,13 @@
   "tasks": [
     {
       "type": "npm",
-      "script": "dev",
+      "script": "dev"
+    },
+    {
+      "label": "Deploying with Docker",
+      "type": "shell",
+      "command": "docker-compose",
+      "args": ["up", "-d", "--build"]
     }
   ]
 }

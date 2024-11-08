@@ -23,7 +23,7 @@ export default function Saved() {
       headers: {
         "Content-Type": "application/json",
       },
-      url: `${BACKEND_URL}/api/v1/anime/saved`,
+      url: `${BACKEND_URL}/api/v2/animes/saved`,
     };
     axios(savedListOptions)
       .then((response) => {
@@ -51,16 +51,19 @@ export default function Saved() {
   return (
     <>
       <Header></Header>
-      <main className="flex flex-col items-center py-10">
-        <div className="w-[80%] space-y-8">
-          <TypographyH2 className="">Your saved</TypographyH2>
-          <div className="flex flex-wrap">
+      <main className="flex flex-col items-center py-5 lg:py-10">
+        <div className="w-[90%] lg:w-[80%]">
+          <TypographyH2 className="pb-4 lg:pb-8">Your saved</TypographyH2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {isLoadingSavedList
               ? exampleArray.map((ex, idx) => {
                   return (
-                    <div key={idx} className="mr-6">
-                      <Skeleton className="w-[200px] h-[285px]"></Skeleton>
-                      <Skeleton className="w-[200px] h-[40px] mt-4"></Skeleton>
+                    <div
+                      key={idx}
+                      className="flex flex-col mb-4 justify-center items-center"
+                    >
+                      <Skeleton className="min-w-[120px] w-[20vw] lg:w-[20vw] lg:max-w-[180px] min-h-[200px] h-[30vw] lg:h-[30vw] lg:max-h-[250px]"></Skeleton>
+                      <Skeleton className="min-w-[120px] w-[20vw] lg:w-[20vw] lg:max-w-[180px] min-h-[16px] h-[6vw] md:h-[4vw] lg:h-[6vw] lg:max-h-[36px] mt-2"></Skeleton>
                     </div>
                   );
                 })

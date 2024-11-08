@@ -28,7 +28,7 @@ const CalendarAnimesComponent = ({ animes }: { animes: SavedInterface[] }) => {
       {animes.map((anime) => {
         const { name, animeId } = anime;
         return (
-          <Link href={`/anime/${animeId}`} key={animeId}>
+          <Link href={`/animes/${animeId}`} key={animeId}>
             <div className="p-2 m-1 rounded-sm bg-accent/50 hover:bg-accent hover:cursor-pointer">
               {name}
             </div>
@@ -60,7 +60,7 @@ export default function CalendarPage() {
       headers: {
         "Content-Type": "application/json",
       },
-      url: `${BACKEND_URL}/api/v1/anime/saved`,
+      url: `${BACKEND_URL}/api/v2/animes/saved`,
     };
     axios(savedListOptions)
       .then((response) => {

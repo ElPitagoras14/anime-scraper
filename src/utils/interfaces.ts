@@ -18,3 +18,12 @@ export interface Saved {
   imageSrc: string;
   weekDay: string;
 }
+
+export interface FieldInfo {
+  name: string;
+  initValue: string;
+  label: string;
+  placeholder: string;
+  type: string;
+  validation: any;
+}

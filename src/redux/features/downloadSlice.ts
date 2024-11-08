@@ -4,14 +4,12 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 type DownloadState = {
   queue: Download[];
   downloading: Download[];
-  browserUse: boolean;
   maxConcurrentDownloads: number;
 };
 
 const initialState: DownloadState = {
   queue: [],
   downloading: [],
-  browserUse: true,
   maxConcurrentDownloads: 4,
 };
 
@@ -69,9 +67,6 @@ export const downloadSlice = createSlice({
         state.queue.splice(index, 1);
       }
     },
-    setBrowserUse: (state, action: PayloadAction<boolean>) => {
-      state.browserUse = action.payload;
-    },
     setMaxConcurrentDownloads: (state, action: PayloadAction<number>) => {
       state.maxConcurrentDownloads = action.payload;
     },
@@ -85,7 +80,6 @@ export const {
   finishDownload,
   cancelDownload,
   quitFromQueue,
-  setBrowserUse,
   setReadyDownload,
   setMaxConcurrentDownloads,
 } = downloadSlice.actions;

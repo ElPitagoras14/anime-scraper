@@ -6,6 +6,9 @@
 .pnp.js
 .yarn/install-state.gz
 
+docker-compose.yaml
+.env.local
+
 # testing
 /coverage
 

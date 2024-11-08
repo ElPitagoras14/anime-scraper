@@ -1,10 +1,18 @@
-import { Header } from "@/components/pageComponents/Header";
+"use client";
+
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  return (
-    <>
-      <Header></Header>
-      <main></main>
-    </>
-  );
+  const { status } = useSession();
+  const router = useRouter();
+
+  if (status === "unauthenticated") {
+    router.push("/login");
+    return;
+  }
+
+  if (status === "authenticated") {
+    router.push("/scraper");
+  }
 }

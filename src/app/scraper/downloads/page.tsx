@@ -147,55 +147,47 @@ export default function Downloads() {
   return (
     <>
       <Header></Header>
-      <main className="flex flex-col items-center py-10">
-        <div className="w-[60%] space-y-4">
-          <div className="flex justify-between items-center">
+      <main className="flex flex-col items-center py-6 lg:py-10">
+        <div className="w-[90%] lg:w-[60%] space-y-4">
+          <div className="flex flex-col lg:flex-row justify-between items-center">
             <div className="flex flex-col">
               <TypographyH2>Downloads</TypographyH2>
               <TypographySmall>
-                Please do not change the page during a download when app use is
-                active.
+                Please do not change the page during a download.
               </TypographySmall>
             </div>
-            <div className="flex space-x-4 items-center">
-              {browserUse ? (
-                <TypographyH5>Browser use active</TypographyH5>
-              ) : (
-                <>
-                  <TypographyH5>App use active</TypographyH5>
-                  {isPaused ? (
-                    <Button
-                      size="default"
-                      disabled={queue.length === 0}
-                      variant="secondary"
-                      onClick={() => {
-                        setIsPaused(false);
-                        toast({
-                          title: "Downloads started",
-                          description: "Downloads will start shortly",
-                        });
-                      }}
-                    >
-                      <TypographyH5>Start Downloads</TypographyH5>
-                    </Button>
-                  ) : (
-                    <Button
-                      size="default"
-                      variant="destructive"
-                      onClick={() => {
-                        setIsPaused(true);
-                        toast({
-                          title: "Downloads stopped",
-                          description: "Downloads will stop shortly",
-                        });
-                      }}
-                    >
-                      <TypographyH5>Stop Downloads</TypographyH5>
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
+            {isPaused ? (
+              <Button
+                size="default"
+                disabled={queue.length === 0}
+                variant="secondary"
+                className="ml-auto"
+                onClick={() => {
+                  setIsPaused(false);
+                  toast({
+                    title: "Downloads started",
+                    description: "Downloads will start shortly",
+                  });
+                }}
+              >
+                <TypographyH5>Start Downloads</TypographyH5>
+              </Button>
+            ) : (
+              <Button
+                size="default"
+                variant="destructive"
+                className="ml-auto"
+                onClick={() => {
+                  setIsPaused(true);
+                  toast({
+                    title: "Downloads stopped",
+                    description: "Downloads will stop shortly",
+                  });
+                }}
+              >
+                <TypographyH5>Stop Downloads</TypographyH5>
+              </Button>
+            )}
           </div>
           <Accordion type="multiple">
             <AccordionItem value="downloading">

@@ -35,6 +35,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Bookmark } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -47,6 +48,8 @@ interface AnimeInfo {
 }
 
 export default function AnimeDetail({ params }: { params: { name: string } }) {
+  const { data } = useSession();
+  const { user: { token = "" } = {} } = data || {};
   const { name: animeId } = params;
   const [animeInfo, setAnimeInfo] = useState<AnimeInfo>({
     name: "",
@@ -65,86 +68,85 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
   const [isLoadingAnimeInfo, setIsLoadingAnimeInfo] = useState(true);
   const [isLoadingEpisodes, setIsLoadingEpisodes] = useState(true);
   const [isLoadingDownload, setIsLoadingDownload] = useState(false);
-  const [isLoadingSavedInfo, setIsLoadingSavedInfo] = useState(true);
+  const [isLoadingSavedInfo, setIsLoadingSavedInfo] = useState(false);
   const [isLoadingSavingAnime, setIsLoadingSavingAnime] = useState(false);
 
   const [range, setRange] = useState<string>("");
 
+  // const savedInfoOptions = {
+  //   method: "GET",
+  //   headers: {
+  //     "Content-Type": "application/json",
+  //   },
+  //   url: `${BACKEND_URL}/api/v2/animes/saved/${animeId}`,
+  // };
+  // axios(savedInfoOptions)
+  //   .then((response) => {
+  //     const {
+  //       data: { payload },
+  //     } = response;
+  //     setIsSaved(Boolean(payload));
+  //   })
+  //   .catch((error) => {
+  //     toast({
+  //       title: "Error fetching data",
+  //       description: "Please try again later.",
+  //     });
+  //   })
+  //   .finally(() => {
+  //     setIsLoadingSavedInfo(false);
+  //   });
+
   useEffect(() => {
-    const animeInfoOptions = {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      url: `${BACKEND_URL}/api/v1/anime/info/${animeId}`,
-    };
-    axios(animeInfoOptions)
-      .then((response) => {
-        const {
-          data: { payload },
-        } = response;
-        setAnimeInfo(payload);
-      })
-      .catch((error) => {
-        toast({
-          title: "Error fetching data",
-          description: "Please try again later.",
-        });
-      })
-      .finally(() => {
-        setIsLoadingAnimeInfo(false);
-      });
+    const fetchData = async () => {
+      try {
+        setIsLoadingAnimeInfo(true);
+        setIsLoadingEpisodes(true);
 
-    const savedInfoOptions = {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      url: `${BACKEND_URL}/api/v1/anime/saved/${animeId}`,
-    };
-    axios(savedInfoOptions)
-      .then((response) => {
-        const {
-          data: { payload },
-        } = response;
-        setIsSaved(Boolean(payload));
-      })
-      .catch((error) => {
-        toast({
-          title: "Error fetching data",
-          description: "Please try again later.",
-        });
-      })
-      .finally(() => {
-        setIsLoadingSavedInfo(false);
-      });
+        const animeInfoOptions = {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          url: `${BACKEND_URL}/api/v2/animes/info/${animeId}`,
+        };
 
-    const streamingLinkOptions = {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      url: `${BACKEND_URL}/api/v1/anime/streamlinks/${animeId}`,
-    };
-    axios(streamingLinkOptions)
-      .then((response) => {
+        const animeInfoResponse = await axios(animeInfoOptions);
+        const {
+          data: { payload: animeInfoPayload },
+        } = animeInfoResponse;
+        setAnimeInfo(animeInfoPayload);
+
+        const streamingLinkOptions = {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          url: `${BACKEND_URL}/api/v2/animes/streamlinks/${animeId}`,
+        };
+
+        const streamingLinkResponse = await axios(streamingLinkOptions);
         const {
           data: {
             payload: { episodes },
           },
-        } = response;
+        } = streamingLinkResponse;
         setStreamingLinks(episodes);
-      })
-      .catch((error) => {
+      } catch (error) {
         toast({
           title: "Error fetching data",
           description: "Please try again later.",
         });
-      })
-      .finally(() => {
+      } finally {
+        setIsLoadingAnimeInfo(false);
         setIsLoadingEpisodes(false);
-      });
-  }, [animeId, toast]);
+      }
+    };
+
+    fetchData();
+  }, [animeId, toast, token]);
 
   const examplesLength = 8;
   const exampleArray = Array.from({ length: examplesLength }, (_, i) => i);
@@ -156,7 +158,7 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
       headers: {
         "Content-Type": "application/json",
       },
-      url: `${BACKEND_URL}/api/v1/anime/downloadlinks/range`,
+      url: `${BACKEND_URL}/api/v2/animes/downloadlinks/range`,
       params: {
         episode_range: range,
       },
@@ -218,7 +220,7 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
       headers: {
         "Content-Type": "application/json",
       },
-      url: `${BACKEND_URL}/api/v1/anime/saved`,
+      url: `${BACKEND_URL}/api/v2/animes/saved`,
       data: {
         anime_id: animeId,
         name,
@@ -251,7 +253,7 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
       headers: {
         "Content-Type": "application/json",
       },
-      url: `${BACKEND_URL}/api/v1/anime/saved/single/${animeId}`,
+      url: `${BACKEND_URL}/api/v2/animes/saved/single/${animeId}`,
     };
     axios(options)
       .then((response) => {
@@ -275,68 +277,67 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
     <>
       <Header></Header>
       <main className="flex justify-center">
-        <div className="grid grid-cols-4 py-10 space-x-24 px-12">
+        <div className="flex flex-col lg:grid lg:grid-cols-4 py-10 lg:space-x-24 space-y-4 lg:space-y-0 px-6 md:px-12 min-w-[100%] lg:min-w-0">
           {isLoadingAnimeInfo || isLoadingSavedInfo ? (
-            <div className="flex flex-col space-y-4 text-center">
-              <Skeleton className="w-[300px] h-[427px]"></Skeleton>
-              <Skeleton className="w-[300px] h-[50px]"></Skeleton>
-              <div className="pt-1">
-                <Skeleton className="w-[300px] h-[30px]"></Skeleton>
-                <Skeleton className="w-[300px] h-[80px] mt-4"></Skeleton>
-              </div>
+            <div className="flex flex-col items-center text-center space-y-2 lg:space-y-4">
+              <Skeleton className="w-[24vh] h-[36vh] lg:w-[20vw] lg:h-[30vw]"></Skeleton>
+              <Skeleton className="w-[30vh] h-[6vh] lg:w-[20vw] lg:h-[3vw]"></Skeleton>
+              <Skeleton className="w-[30vh] h-[2vh] lg:w-[20vw] lg:h-[2vw]"></Skeleton>
+              <Skeleton className="w-[40vh] h-[16vh] lg:w-[22vw] lg:h-[20vw]"></Skeleton>
             </div>
           ) : (
-            <div className="relative hover:cursor-pointer flex flex-col  text-center">
-              <Image
-                src={imageSrc}
-                alt={""}
-                width={300}
-                height={300}
-                className="rounded-md self-center"
-              ></Image>
-              <div
-                className="absolute top-0 end-5 pt-[0.3rem] px-[0.2rem] m-1 rounded-md bg-[#020817]/80 hover:cursor-pointer mt-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isSaved) {
-                    unsaveAnime();
-                  } else {
-                    saveAnime();
-                  }
-                  setIsSaved(!isSaved);
-                }}
-              >
-                <TooltipProvider>
-                  <Tooltip>
-                    {isLoadingSavingAnime ? (
-                      <Icons.spinner className="h-6 w-6 mb-1 animate-spin" />
-                    ) : isSaved ? (
-                      <>
-                        <TooltipTrigger>
-                          <Bookmark
-                            fill="hsl(var(--primary))"
-                            className="h-6 w-6 text-primary"
-                          ></Bookmark>
-                        </TooltipTrigger>
-                        <TooltipContent>Remove from saved</TooltipContent>
-                      </>
-                    ) : (
-                      <>
-                        <TooltipTrigger>
-                          <Bookmark className="h-6 w-6 text-white"></Bookmark>
-                        </TooltipTrigger>
-                        <TooltipContent>Add to saved</TooltipContent>
-                      </>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
+            <div className="flex flex-col items-center text-center">
+              <div className="relative w-[24vh] h-[36vh] lg:w-[20vw] lg:h-[30vw] flex justify-center">
+                <Image
+                  src={imageSrc}
+                  alt=""
+                  layout="fill"
+                  className="rounded-md object-cover"
+                />
+                {/* <div
+                  className="absolute top-0 end-1 pt-[0.3rem] px-[0.2rem] m-1 rounded-md bg-[#020817]/80 hover:cursor-pointer mt-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isSaved) {
+                      unsaveAnime();
+                    } else {
+                      saveAnime();
+                    }
+                    setIsSaved(!isSaved);
+                  }}
+                >
+                  <TooltipProvider>
+                    <Tooltip>
+                      {isLoadingSavingAnime ? (
+                        <Icons.spinner className="h-6 w-6 mb-1 animate-spin hover:cursor-pointer" />
+                      ) : isSaved ? (
+                        <>
+                          <TooltipTrigger>
+                            <Bookmark
+                              fill="hsl(var(--primary))"
+                              className="h-6 w-6 text-primary"
+                            ></Bookmark>
+                          </TooltipTrigger>
+                          <TooltipContent>Remove from saved</TooltipContent>
+                        </>
+                      ) : (
+                        <>
+                          <TooltipTrigger>
+                            <Bookmark className="h-6 w-6 text-white"></Bookmark>
+                          </TooltipTrigger>
+                          <TooltipContent>Add to saved</TooltipContent>
+                        </>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                </div> */}
               </div>
-              <div className="rounded-md bg-accent w-full mt-4">
+              <div className="rounded-md bg-accent w-3/6 lg:w-full mt-4">
                 <TypographyH3 className="text-center py-3">
                   {finished ? "Finalizado" : "En emisión"}
                 </TypographyH3>
               </div>
-              <div className="px-2 pt-1 mt-6">
+              <div className="px-2 pt-1 mt-3 lg:mt-6">
                 <TypographyH4>{name}</TypographyH4>
                 <TypographySmall className="text-start">
                   {description}
@@ -344,8 +345,8 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
               </div>
             </div>
           )}
-          <div className="col-span-3 h-[500px]">
-            <div className="flex justify-between items-center pt-2 pb-4 pl-6 pr-4">
+          <div className="col-span-3">
+            <div className="flex justify-between items-center pt-2 pb-4 pl-2 lg:pl-6 pr-2 lg:pr-4">
               <TypographyH3>Episodes</TypographyH3>
               <div className="flex space-x-4">
                 <Input
@@ -374,7 +375,7 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
             </div>
             <Separator></Separator>
             {isLoadingEpisodes ? (
-              <ScrollArea className="h-[70vh] border rounded-md mt-4">
+              <ScrollArea className="h-[50vh] lg:h-[70vh] border rounded-md mt-4">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -393,7 +394,7 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
                 })}
               </ScrollArea>
             ) : (
-              <ScrollArea className="h-[70vh] border rounded-md mt-4">
+              <ScrollArea className="h-[50vh] lg:h-[70vh] border rounded-md mt-4">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -404,12 +405,12 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
                   </TableHeader>
                   <TableBody>
                     {streamingLinks.map((episode) => {
-                      const { title, link, episodeId } = episode;
+                      const { name: episodeName, link, episodeId } = episode;
                       return (
                         <EpisodeInfo
                           key={episodeId}
                           episodeId={episodeId}
-                          title={title}
+                          title={episodeName}
                           anime={animeId}
                           imageSrc={imageSrc}
                           streamingLink={link}

@@ -53,7 +53,7 @@ export const DownloadCard = ({
 
   return (
     <Card>
-      <div className="relative flex items-center space-x-4 p-4">
+      <div className="relative flex items-center space-x-4 p-2 lg:p-4">
         <Image
           src={imageSrc}
           alt={""}
