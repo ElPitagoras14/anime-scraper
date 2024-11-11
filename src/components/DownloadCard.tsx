@@ -11,7 +11,7 @@ import { useAppSelector } from "@/redux/hooks";
 
 interface DownloadCardProps {
   anime: string;
-  title: string;
+  episodeName: string;
   imageSrc: string;
   date: string;
   isFinished: boolean;
@@ -32,7 +32,7 @@ const formatFileSize = (bytes: number): string => {
 
 export const DownloadCard = ({
   anime,
-  title,
+  episodeName,
   imageSrc,
   date,
   isFinished,
@@ -63,7 +63,7 @@ export const DownloadCard = ({
         ></Image>
         <div className="flex flex-col w-full">
           <TypographyH6>
-            {anime} - {title}
+            {anime} - {episodeName}
           </TypographyH6>
           <TypographySmall>{formattedDate}</TypographySmall>
           <TypographySmall>

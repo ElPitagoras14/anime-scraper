@@ -80,11 +80,14 @@ const authOptions: AuthOptions = {
           }
           return null;
         } catch (error) {
-          throw new Error("Login failed");
+          throw new Error("Login fallido");
         }
       },
     }),
   ],
+  session: {
+    maxAge: 60 * 60,
+  },
   callbacks: {
     async jwt({ token, user }: { token: any; user: User }) {
       const parsedUser = user as CustomUser;

@@ -8,7 +8,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
+import { Anime } from "@/utils/interfaces";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -18,80 +19,86 @@ export default function Search() {
   const { data } = useSession();
   const { user: { token = "" } = {} } = data || {};
 
-  const [animeList, setAnimeList] = useState([]);
+  const [indexedAnimeList, setIndexedAnimeList] = useState<{
+    [key: string]: Anime;
+  }>({});
   const [isLoadingAnimeList, setIsLoadingAnimeList] = useState<boolean>(true);
-  const [savedAnime, setSavedAnime] = useState({});
-  const [isLoadingSavedList, setIsLoadingSavedList] = useState<boolean>(true);
 
   const { toast } = useToast();
 
   useEffect(() => {
-    const animeListOptions = {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      url: `${BACKEND_URL}/api/v2/animes/search?query=${animeName}`,
-    };
-    axios(animeListOptions)
-      .then((response) => {
+    (async () => {
+      try {
+        const animeListOptions = {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          url: `${BACKEND_URL}/api/v2/animes/search?query=${animeName}`,
+        };
+
+        const response = await axios(animeListOptions);
+
         const {
           data: {
             payload: { items },
           },
         } = response;
-        setAnimeList(items);
-      })
-      .catch((error) => {
-        toast({
-          title: "Error fetching data",
-          description: "Please try again later",
-        });
-      })
-      .finally(() => {
-        setIsLoadingAnimeList(false);
-        setIsLoadingSavedList(false);
-      });
 
-    // const savedListOptions = {
-    //   method: "GET",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   url: `${BACKEND_URL}/api/v2/anime/saved`,
-    // };
-    // axios(savedListOptions)
-    //   .then((response) => {
-    //     const {
-    //       data: {
-    //         payload: { items },
-    //       },
-    //     } = response;
-    //     const saved = items.reduce(
-    //       (
-    //         acc: {
-    //           [key: string]: Saved;
-    //         },
-    //         item: Saved
-    //       ) => {
-    //         acc[item.animeId] = item;
-    //         return acc;
-    //       },
-    //       {}
-    //     );
-    //     setSavedAnime(saved);
-    //   })
-    //   .catch((error) => {
-    //     toast({
-    //       title: "Error fetching data",
-    //       description: "Please try again later",
-    //     });
-    //   })
-    //   .finally(() => {
-    //     setIsLoadingSavedList(false);
-    //   });
+        toast({
+          title: "Success",
+          description: "Fetched data successfully",
+        });
+
+        const indexedItems = items.reduce((acc: any, item: any) => {
+          const { animeId } = item;
+          return { ...acc, [animeId]: item };
+        }, {});
+
+        console.log("items", items);
+        console.log("indexedItems", indexedItems);
+
+        setIndexedAnimeList(indexedItems);
+      } catch (error: any) {
+        if (!error.response) {
+          toast({
+            title: "Error fetching data",
+            description: "Please try again later",
+          });
+        }
+
+        const { response: { status = 500 } = {} } = error;
+
+        if (status === 401) {
+          toast({
+            title: "Unauthorized",
+            description: "Please login again",
+          });
+          await signOut({
+            callbackUrl: "/login",
+          });
+        }
+
+        if (status === 500) {
+          toast({
+            title: "Server error",
+            description: "Please try again later",
+          });
+        }
+      } finally {
+        setIsLoadingAnimeList(false);
+      }
+    })();
   }, [animeName, toast, token]);
+
+  const setSavedAnime = (animeId: string, isSaved: boolean) => {
+    setIndexedAnimeList((prev) => {
+      const updatedList = { ...prev };
+      updatedList[animeId].isSaved = isSaved;
+      return updatedList;
+    });
+  };
 
   const examplesLength = 4;
   const exampleArray = Array.from({ length: examplesLength }, (_, i) => i);
@@ -105,7 +112,7 @@ export default function Search() {
             Result list for &quot;{animeName}&quot;
           </TypographyH2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-            {isLoadingAnimeList || isLoadingSavedList
+            {isLoadingAnimeList
               ? exampleArray.map((ex, idx) => {
                   return (
                     <div
@@ -117,16 +124,17 @@ export default function Search() {
                     </div>
                   );
                 })
-              : animeList.map((anime) => {
-                  const { name, animeId, imageSrc } = anime;
-                  const saved = savedAnime.hasOwnProperty(animeId);
+              : Object.keys(indexedAnimeList).map((key: any) => {
+                  const anime = indexedAnimeList[key];
+                  const { name, animeId, imageSrc, isSaved } = anime || {};
                   return (
                     <AnimeCard
                       key={animeId}
                       name={name}
                       animeId={animeId}
                       imageSrc={imageSrc}
-                      saved={saved}
+                      isSaved={isSaved}
+                      setSavedAnime={setSavedAnime}
                     ></AnimeCard>
                   );
                 })}

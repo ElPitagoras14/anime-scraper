@@ -1,27 +1,27 @@
 "use client";
 
-import { TableCell, TableRow } from "./ui/table";
+import { TableCell, TableRow } from "../ui/table";
 import { Download, Play } from "lucide-react";
 import { useAppDispatch } from "@/redux/hooks";
 import { addToQueue } from "@/redux/features/downloadSlice";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
 import { useState } from "react";
-import { useToast } from "./ui/use-toast";
+import { useToast } from "../ui/use-toast";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Icons } from "./ui/icons";
-import { useSession } from "next-auth/react";
+import { Icons } from "../ui/icons";
+import { signOut, useSession } from "next-auth/react";
 
 interface EpisodeInfoProps {
   anime: string;
   streamingLink: string;
   episodeId: number;
-  title: string;
+  name: string;
   imageSrc: string;
 }
 
@@ -31,7 +31,7 @@ export const EpisodeInfo = ({
   anime,
   streamingLink,
   episodeId,
-  title,
+  name,
   imageSrc,
 }: EpisodeInfoProps) => {
   const { data } = useSession();
@@ -40,73 +40,96 @@ export const EpisodeInfo = ({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const startDownload = (fileUrl: string) => {
+  const startDownload = (downloadInfo: { link: string; service: string }) => {
+    const { link, service } = downloadInfo;
     dispatch(
       addToQueue({
         id: uuidv4(),
         isReady: false,
-        fileUrl,
+        link,
+        service,
         fileName: `${anime} - Episode ${episodeId}.mp4`,
         date: new Date().toISOString(),
         anime,
         episodeId,
-        title,
+        name,
         imageSrc,
         progress: 0,
       })
     );
   };
 
-  const getDownloadLink = () => {
+  const getDownloadLink = async () => {
     setIsLoading(true);
+    try {
+      const downloadOptions = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        url: `${BACKEND_URL}/api/v2/animes/downloadlinks/single`,
+        params: {
+          episode_id: episodeId,
+          episode_link: streamingLink,
+        },
+      };
 
-    const options = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      url: `${BACKEND_URL}/api/v2/animes/downloadlinks/single`,
-      params: {
-        episode_id: episodeId,
-        episode_link: streamingLink,
-      },
-    };
+      toast({
+        title: "Download request.",
+        description: `Episode ${episodeId}`,
+      });
 
-    toast({
-      title: "Download request.",
-      description: `Episode ${episodeId}`,
-    });
+      const response = await axios(downloadOptions);
+      const {
+        data: {
+          payload: { downloadInfo: { link = "", service = "" } = {} },
+        },
+      } = response;
 
-    axios(options)
-      .then((response) => {
-        const {
-          data: {
-            payload: { downloadInfo: { link = "" } = {} },
-          },
-        } = response;
-        if (!link) {
-          toast({
-            title: "Error fetching download link",
-            description: `Episode ${episodeId}`,
-          });
-          return;
-        }
-        toast({
-          title: `Adding to download queue.`,
-          description: `Episode ${episodeId}`,
-        });
-        startDownload(link);
-      })
-      .catch((error) => {
+      if (!link) {
         toast({
           title: "Error fetching download link",
           description: `Episode ${episodeId}`,
         });
-      })
-      .finally(() => {
-        setIsLoading(false);
+        return;
+      }
+
+      toast({
+        title: `Adding to download queue.`,
+        description: `Episode ${episodeId}`,
       });
+
+      startDownload({ link, service });
+    } catch (error: any) {
+      if (!error.response) {
+        toast({
+          title: "Error fetching download link",
+          description: `Episode ${episodeId}`,
+        });
+      }
+
+      const { response: { status = 500 } = {} } = error;
+
+      if (status === 401) {
+        toast({
+          title: "Unauthorized",
+          description: "Please login again",
+        });
+        await signOut({
+          callbackUrl: "/login",
+        });
+      }
+
+      if (status === 500) {
+        toast({
+          title: "Server error",
+          description: "Please try again later",
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const openStreamingLink = () => {
@@ -116,7 +139,7 @@ export const EpisodeInfo = ({
   return (
     <TableRow>
       <TableCell>{episodeId}</TableCell>
-      <TableCell>{title}</TableCell>
+      <TableCell>{name}</TableCell>
       <TableCell className="flex justify-center">
         <TooltipProvider>
           {isLoading ? (

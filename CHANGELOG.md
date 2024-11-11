@@ -1,12 +1,18 @@
 # Changelog
 
+## [2.1.0] - 2024-11-12
+
+### Added
+
+- Save animes feature
+- Calendar for emission anime
+
 ## [2.0.0] - 2024-11-10
 
 ### Added
 
 - Login and register view.
-- Administrator view to manage users and cache.
-- Change username, profile image and password.
+- Rewriting of components according to new payload of Scraper API.
 - UX improvements.
 
 ### Changed

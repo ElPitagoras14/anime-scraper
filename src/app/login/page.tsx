@@ -42,17 +42,12 @@ const fields = [
   },
 ];
 
-const validationSchema = z
-  .object(
-    fields.reduce((acc, field) => {
-      acc[field.name] = field.validation;
-      return acc;
-    }, {} as any)
-  )
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
+const validationSchema = z.object(
+  fields.reduce((acc, field) => {
+    acc[field.name] = field.validation;
+    return acc;
+  }, {} as any)
+);
 
 const initialValues = fields.reduce((acc, field) => {
   acc[field.name] = field.initValue;
@@ -70,6 +65,15 @@ export default function Register() {
     mode: "onChange",
   });
 
+  const handleKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    values: any
+  ) => {
+    if (event.key === "Enter") {
+      handleLogin(values);
+    }
+  };
+
   const handleLogin = async (data: z.infer<typeof validationSchema>) => {
     const response = await signIn("credentials", {
       username: data.username,
@@ -80,9 +84,10 @@ export default function Register() {
     if (response?.ok) {
       router.push("/scraper");
     } else {
+      const { error } = response || {};
       toast({
         title: "Error logging in",
-        description: "Please try again later",
+        description: error,
       });
     }
   };
@@ -132,7 +137,17 @@ export default function Register() {
             </Link>
           </p>
           <Form {...form}>
-            <form className="flex flex-col space-y-2 w-[100%] lg:w-[20vw] justify-center">
+            <form
+              className="flex flex-col space-y-2 w-[100%] lg:w-[20vw] justify-center"
+              onKeyDown={(e: any) => {
+                const { success } = validationSchema.safeParse(
+                  form.getValues()
+                );
+                if (success) {
+                  handleKeyDown(e, form.getValues());
+                }
+              }}
+            >
               {fields.map((field) => (
                 <FieldLabel
                   key={field.name}

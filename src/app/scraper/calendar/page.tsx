@@ -12,8 +12,9 @@ import {
 } from "@/components/ui/table";
 import { TypographyH2 } from "@/components/ui/typography";
 import { useToast } from "@/components/ui/use-toast";
-import { Saved as SavedInterface } from "@/utils/interfaces";
+import { Anime, Saved as SavedInterface } from "@/utils/interfaces";
 import axios from "axios";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -28,7 +29,7 @@ const CalendarAnimesComponent = ({ animes }: { animes: SavedInterface[] }) => {
       {animes.map((anime) => {
         const { name, animeId } = anime;
         return (
-          <Link href={`/animes/${animeId}`} key={animeId}>
+          <Link href={`/scraper/info/${animeId}`} key={animeId}>
             <div className="p-2 m-1 rounded-sm bg-accent/50 hover:bg-accent hover:cursor-pointer">
               {name}
             </div>
@@ -40,10 +41,13 @@ const CalendarAnimesComponent = ({ animes }: { animes: SavedInterface[] }) => {
 };
 
 export default function CalendarPage() {
-  const [savedAnime, setSavedAnime] = useState<SavedInterface[]>([]);
+  const { data } = useSession();
+  const { user : { token = "" } = {} } = data || {};
+
+  const [animeList, setAnimeList] = useState<Anime[]>([]);
   const [isLoadingSavedList, setIsLoadingSavedList] = useState(true);
 
-  const indexedByWeekDay = savedAnime.reduce((acc, anime) => {
+  const indexedByWeekDay = animeList.reduce((acc: any, anime: any) => {
     const weekDay = anime.weekDay;
     if (!acc[weekDay]) {
       acc[weekDay] = [];
@@ -55,32 +59,58 @@ export default function CalendarPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const savedListOptions = {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      url: `${BACKEND_URL}/api/v2/animes/saved`,
-    };
-    axios(savedListOptions)
-      .then((response) => {
+    setIsLoadingSavedList(true);
+    (async () => {
+      try {
+        const savedListOptions = {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          url: `${BACKEND_URL}/api/v2/animes/saved`,
+        };
+        const response = await axios(savedListOptions);
         const {
           data: {
             payload: { items },
           },
         } = response;
-        setSavedAnime(items);
-      })
-      .catch((error) => {
-        toast({
-          title: "Error fetching data",
-          description: "Please try again later",
-        });
-      })
-      .finally(() => {
+
+        setAnimeList(items);
+      } catch (error: any) {
+        console.error("error", error);
+        if (!error.response) {
+          toast({
+            title: "Error fetching data",
+            description: "Please try again later",
+          });
+          return;
+        }
+
+        const { response: { status = 500 } = {} } = error;
+
+        if (status === 401) {
+          toast({
+            title: "Unauthorized",
+            description: "Please login again",
+          });
+          await signOut({
+            callbackUrl: "/login",
+          });
+        }
+
+        if (status == 500) {
+          toast({
+            title: "Server error",
+            description: "Please try again later",
+          });
+        }
+      } finally {
         setIsLoadingSavedList(false);
-      });
-  }, [toast]);
+      }
+    })();
+  }, [toast, token]);
 
   return (
     <>

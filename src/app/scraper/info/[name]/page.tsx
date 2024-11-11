@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { EpisodeInfo } from "@/components/EpisodeInfo";
+import { EpisodeInfo } from "@/components/pageComponents/EpisodeInfo";
 import { useAppDispatch } from "@/redux/hooks";
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -35,16 +35,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Bookmark } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 interface AnimeInfo {
   name: string;
-  finished: boolean;
   description: string;
   imageSrc: string;
-  weekDay: string | null;
+  isFinished: boolean;
+  weekDay: string;
+  isSaved: boolean;
 }
 
 export default function AnimeDetail({ params }: { params: { name: string } }) {
@@ -53,56 +54,31 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
   const { name: animeId } = params;
   const [animeInfo, setAnimeInfo] = useState<AnimeInfo>({
     name: "",
-    finished: false,
     description: "",
     imageSrc: "",
-    weekDay: null,
+    isFinished: false,
+    weekDay: "",
+    isSaved: false,
   });
-  const { name, finished, description, imageSrc, weekDay } = animeInfo || {};
+  const { name, description, imageSrc, isFinished, weekDay, isSaved } =
+    animeInfo || {};
   const [streamingLinks, setStreamingLinks] = useState([]);
 
   const { toast } = useToast();
   const dispatch = useAppDispatch();
-  const [isSaved, setIsSaved] = useState<boolean>(false);
 
   const [isLoadingAnimeInfo, setIsLoadingAnimeInfo] = useState(true);
   const [isLoadingEpisodes, setIsLoadingEpisodes] = useState(true);
   const [isLoadingDownload, setIsLoadingDownload] = useState(false);
-  const [isLoadingSavedInfo, setIsLoadingSavedInfo] = useState(false);
-  const [isLoadingSavingAnime, setIsLoadingSavingAnime] = useState(false);
+  const [isLoadingSaving, setIsLoadingSaving] = useState(false);
 
   const [range, setRange] = useState<string>("");
 
-  // const savedInfoOptions = {
-  //   method: "GET",
-  //   headers: {
-  //     "Content-Type": "application/json",
-  //   },
-  //   url: `${BACKEND_URL}/api/v2/animes/saved/${animeId}`,
-  // };
-  // axios(savedInfoOptions)
-  //   .then((response) => {
-  //     const {
-  //       data: { payload },
-  //     } = response;
-  //     setIsSaved(Boolean(payload));
-  //   })
-  //   .catch((error) => {
-  //     toast({
-  //       title: "Error fetching data",
-  //       description: "Please try again later.",
-  //     });
-  //   })
-  //   .finally(() => {
-  //     setIsLoadingSavedInfo(false);
-  //   });
-
   useEffect(() => {
-    const fetchData = async () => {
+    (async () => {
+      setIsLoadingAnimeInfo(true);
+      setIsLoadingEpisodes(true);
       try {
-        setIsLoadingAnimeInfo(true);
-        setIsLoadingEpisodes(true);
-
         const animeInfoOptions = {
           method: "GET",
           headers: {
@@ -111,13 +87,43 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
           },
           url: `${BACKEND_URL}/api/v2/animes/info/${animeId}`,
         };
-
         const animeInfoResponse = await axios(animeInfoOptions);
         const {
           data: { payload: animeInfoPayload },
         } = animeInfoResponse;
-        setAnimeInfo(animeInfoPayload);
 
+        setAnimeInfo(animeInfoPayload);
+      } catch (error: any) {
+        if (!error.response) {
+          toast({
+            title: "Error fetching anime info",
+            description: "Please try again later.",
+          });
+        }
+
+        const { response: { status = 500 } = {} } = error;
+
+        if (status === 401) {
+          toast({
+            title: "Unauthorized",
+            description: "Please login again.",
+          });
+          await signOut({
+            callbackUrl: "/login",
+          });
+        }
+
+        if (status === 500) {
+          toast({
+            title: "Server error",
+            description: "Please try again later.",
+          });
+        }
+      } finally {
+        setIsLoadingAnimeInfo(false);
+      }
+
+      try {
         const streamingLinkOptions = {
           method: "GET",
           headers: {
@@ -126,159 +132,195 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
           },
           url: `${BACKEND_URL}/api/v2/animes/streamlinks/${animeId}`,
         };
-
         const streamingLinkResponse = await axios(streamingLinkOptions);
         const {
           data: {
             payload: { episodes },
           },
         } = streamingLinkResponse;
+
         setStreamingLinks(episodes);
-      } catch (error) {
-        toast({
-          title: "Error fetching data",
-          description: "Please try again later.",
-        });
+      } catch (error: any) {
+        if (!error.response) {
+          toast({
+            title: "Error fetching episodes",
+            description: "Please try again later.",
+          });
+        }
+
+        const { response: { status = 500 } = {} } = error;
+
+        if (status === 401) {
+          toast({
+            title: "Unauthorized",
+            description: "Please login again.",
+          });
+          await signOut({
+            callbackUrl: "/login",
+          });
+        }
+
+        if (status === 500) {
+          toast({
+            title: "Server error",
+            description: "Please try again later.",
+          });
+        }
       } finally {
-        setIsLoadingAnimeInfo(false);
         setIsLoadingEpisodes(false);
       }
-    };
-
-    fetchData();
+    })();
   }, [animeId, toast, token]);
 
-  const examplesLength = 8;
-  const exampleArray = Array.from({ length: examplesLength }, (_, i) => i);
-
-  const downloadRange = () => {
+  const downloadRange = async () => {
     setIsLoadingDownload(true);
-    const options = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      url: `${BACKEND_URL}/api/v2/animes/downloadlinks/range`,
-      params: {
-        episode_range: range,
-      },
-      data: streamingLinks,
-    };
+    try {
+      const downloadRangeOptions = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        url: `${BACKEND_URL}/api/v2/animes/downloadlinks/range`,
+        params: {
+          episode_range: range,
+        },
+        data: streamingLinks,
+      };
 
-    toast({
-      title: "Download request",
-      description: `Episodes ${range}.`,
-    });
+      toast({
+        title: "Download request",
+        description: `Episodes ${range}.`,
+      });
 
-    axios(options)
-      .then((response) => {
+      const response = await axios(downloadRangeOptions);
+      const {
+        data: { payload: episodes },
+      } = response;
+
+      episodes.forEach((episode: any) => {
         const {
-          data: {
-            payload: { episodes },
-          },
-        } = response;
+          name,
+          downloadInfo: { service, link },
+          episodeId,
+        } = episode || {};
 
-        episodes.forEach((episode: any) => {
-          const { title, link, episodeId } = episode;
+        dispatch(
+          addToQueue({
+            id: uuidv4(),
+            link,
+            service,
+            fileName: `${animeId} - Episode ${episodeId}.mp4`,
+            date: new Date().toISOString(),
+            anime: animeId,
+            isReady: false,
+            episodeId,
+            name,
+            imageSrc,
+            progress: 0,
+          })
+        );
+      });
 
-          dispatch(
-            addToQueue({
-              id: uuidv4(),
-              fileUrl: link,
-              fileName: `${animeId} - Episode ${episodeId}.mp4`,
-              date: new Date().toISOString(),
-              anime: animeId,
-              isReady: false,
-              episodeId,
-              title,
-              imageSrc,
-              progress: 0,
-            })
-          );
-        });
-
-        toast({
-          title: `Adding to download queue`,
-          description: `Episodes ${range}.`,
-        });
-      })
-      .catch((error) => {
+      toast({
+        title: `Adding to download queue`,
+        description: `Episodes ${range}.`,
+      });
+    } catch (error: any) {
+      if (!error.response) {
         toast({
           title: "Error downloading range",
           description: "Please try again later.",
         });
-      })
-      .finally(() => {
-        setIsLoadingDownload(false);
-      });
-  };
+      }
 
-  const saveAnime = () => {
-    setIsLoadingSavingAnime(true);
-    const options = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      url: `${BACKEND_URL}/api/v2/animes/saved`,
-      data: {
-        anime_id: animeId,
-        name,
-        image_src: imageSrc,
-        week_day: weekDay,
-      },
-    };
-    axios(options)
-      .then((response) => {
-        setIsSaved(true);
+      const { response: { status = 500 } = {} } = error;
+
+      if (status === 401) {
         toast({
-          title: `${name} added to saved`,
+          title: "Unauthorized",
+          description: "Please login again.",
         });
-      })
-      .catch((error) => {
+        await signOut({
+          callbackUrl: "/login",
+        });
+      }
+
+      if (status === 500) {
         toast({
-          title: "Error saving anime",
+          title: "Server error",
           description: "Please try again later.",
         });
-      })
-      .finally(() => {
-        setIsLoadingSavingAnime(false);
-      });
+      }
+    } finally {
+      setIsLoadingDownload(false);
+    }
   };
 
-  const unsaveAnime = () => {
-    setIsLoadingSavingAnime(true);
-    const options = {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      url: `${BACKEND_URL}/api/v2/animes/saved/single/${animeId}`,
-    };
-    axios(options)
-      .then((response) => {
-        setIsSaved(false);
-        toast({
-          title: `${name} removed from saved`,
-        });
-      })
-      .catch((error) => {
-        toast({
-          title: "Error removing anime",
-          description: "Please try again later.",
-        });
-      })
-      .finally(() => {
-        setIsLoadingSavingAnime(false);
+  const changeSavedAnime = async (isSaving: boolean) => {
+    console.log("isSaving", isSaving);
+    setIsLoadingSaving(true);
+    try {
+      const saveOptions = {
+        method: isSaving ? "POST" : "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        url: `${BACKEND_URL}/api/v2/animes/saved/${animeId}`,
+      };
+      await axios(saveOptions);
+      toast({
+        title: `${name} ${isSaving ? "added" : "removed"} to saved`,
       });
+
+      setAnimeInfo((prev) => ({ ...prev, isSaved: isSaving }));
+    } catch (error: any) {
+      if (!error.response) {
+        toast({
+          title: `Error ${isSaving ? "saving" : "removing"} anime`,
+          description: "Please try again later",
+        });
+      }
+
+      const { response: { status = 500 } = {} } = error;
+
+      if (status === 401) {
+        toast({
+          title: "Unauthorized",
+          description: "Please login again",
+        });
+        await signOut({
+          callbackUrl: "/login",
+        });
+      }
+
+      if (status === 409) {
+        toast({
+          title: `${name} already ${isSaving ? "saved" : "unsaved"}`,
+        });
+      }
+
+      if (status === 500) {
+        toast({
+          title: "Server error",
+          description: "Please try again later",
+        });
+      }
+    } finally {
+      setIsLoadingSaving(false);
+    }
   };
+
+  const examplesLength = 8;
+  const exampleArray = Array.from({ length: examplesLength }, (_, i) => i);
 
   return (
     <>
       <Header></Header>
       <main className="flex justify-center">
         <div className="flex flex-col lg:grid lg:grid-cols-4 py-10 lg:space-x-24 space-y-4 lg:space-y-0 px-6 md:px-12 min-w-[100%] lg:min-w-0">
-          {isLoadingAnimeInfo || isLoadingSavedInfo ? (
+          {isLoadingAnimeInfo ? (
             <div className="flex flex-col items-center text-center space-y-2 lg:space-y-4">
               <Skeleton className="w-[24vh] h-[36vh] lg:w-[20vw] lg:h-[30vw]"></Skeleton>
               <Skeleton className="w-[30vh] h-[6vh] lg:w-[20vw] lg:h-[3vw]"></Skeleton>
@@ -294,21 +336,16 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
                   layout="fill"
                   className="rounded-md object-cover"
                 />
-                {/* <div
+                <div
                   className="absolute top-0 end-1 pt-[0.3rem] px-[0.2rem] m-1 rounded-md bg-[#020817]/80 hover:cursor-pointer mt-2"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    if (isSaved) {
-                      unsaveAnime();
-                    } else {
-                      saveAnime();
-                    }
-                    setIsSaved(!isSaved);
+                    await changeSavedAnime(!isSaved);
                   }}
                 >
                   <TooltipProvider>
                     <Tooltip>
-                      {isLoadingSavingAnime ? (
+                      {isLoadingSaving ? (
                         <Icons.spinner className="h-6 w-6 mb-1 animate-spin hover:cursor-pointer" />
                       ) : isSaved ? (
                         <>
@@ -330,11 +367,11 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
                       )}
                     </Tooltip>
                   </TooltipProvider>
-                </div> */}
+                </div>
               </div>
               <div className="rounded-md bg-accent w-3/6 lg:w-full mt-4">
                 <TypographyH3 className="text-center py-3">
-                  {finished ? "Finalizado" : "En emisión"}
+                  {isFinished ? "Finished" : `New episode every ${weekDay}`}
                 </TypographyH3>
               </div>
               <div className="px-2 pt-1 mt-3 lg:mt-6">
@@ -359,7 +396,6 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
                   variant="secondary"
                   disabled={
                     isLoadingAnimeInfo ||
-                    isLoadingSavedInfo ||
                     !range ||
                     isLoadingDownload ||
                     isLoadingEpisodes
@@ -405,12 +441,12 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
                   </TableHeader>
                   <TableBody>
                     {streamingLinks.map((episode) => {
-                      const { name: episodeName, link, episodeId } = episode;
+                      const { name, link, episodeId } = episode;
                       return (
                         <EpisodeInfo
                           key={episodeId}
                           episodeId={episodeId}
-                          title={episodeName}
+                          name={name}
                           anime={animeId}
                           imageSrc={imageSrc}
                           streamingLink={link}

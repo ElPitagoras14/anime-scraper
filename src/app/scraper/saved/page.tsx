@@ -4,46 +4,97 @@ import { AnimeCard } from "@/components/AnimeCard";
 import { Header } from "@/components/pageComponents/Header";
 import { TypographyH2 } from "@/components/ui/typography";
 import { useEffect, useState } from "react";
-import { Saved as SavedInterface } from "@/utils/interfaces";
+import { Anime, Saved as SavedInterface } from "@/utils/interfaces";
 import axios from "axios";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
+import { signOut, useSession } from "next-auth/react";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export default function Saved() {
-  const [savedAnime, setSavedAnime] = useState<SavedInterface[]>([]);
+  const { data } = useSession();
+  const { user: { token = "" } = {} } = data || {};
+  const { toast } = useToast();
+  const [indexedAnimeList, setIndexedAnimeList] = useState<{
+    [key: string]: Anime;
+  }>({});
   const [isLoadingSavedList, setIsLoadingSavedList] = useState(true);
 
-  const { toast } = useToast();
-
   useEffect(() => {
-    const savedListOptions = {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      url: `${BACKEND_URL}/api/v2/animes/saved`,
-    };
-    axios(savedListOptions)
-      .then((response) => {
+    setIsLoadingSavedList(true);
+    (async () => {
+      try {
+        const savedListOptions = {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          url: `${BACKEND_URL}/api/v2/animes/saved`,
+        };
+
+        const response = await axios(savedListOptions);
+
         const {
           data: {
             payload: { items },
           },
         } = response;
-        setSavedAnime(items);
-      })
-      .catch((error) => {
-        toast({
-          title: "Error fetching data",
-          description: "Please try again later",
-        });
-      })
-      .finally(() => {
+
+        const indexedItems = items.reduce((acc: any, item: any) => {
+          const { animeId } = item;
+          return { ...acc, [animeId]: item };
+        }, {});
+
+        console.log("indexedItems", items);
+
+        if (Object.keys(indexedAnimeList).length === 0) {
+          setIndexedAnimeList(indexedItems);
+          toast({
+            title: "Success",
+            description: "Fetched data successfully",
+          });
+        }
+      } catch (error: any) {
+        if (!error.response) {
+          toast({
+            title: "Error fetching data",
+            description: "Please try again later",
+          });
+        }
+
+        const { response: { status = 500 } = {} } = error;
+
+        if (status === 401) {
+          toast({
+            title: "Unauthorized",
+            description: "Please login again",
+          });
+          await signOut({
+            callbackUrl: "/login",
+          });
+        }
+
+        if (status === 500) {
+          toast({
+            title: "Internal server error",
+            description: "Please try again later",
+          });
+        }
+      } finally {
         setIsLoadingSavedList(false);
-      });
-  }, [toast]);
+      }
+    })();
+  }, [toast, indexedAnimeList, token]);
+
+  const setSavedAnime = (animeId: string, isSaved: boolean) => {
+    setIndexedAnimeList((prev) => {
+      const updatedList = { ...prev };
+      updatedList[animeId].isSaved = isSaved;
+      return updatedList;
+    });
+  };
 
   const examplesLength = 4;
   const exampleArray = Array.from({ length: examplesLength }, (_, i) => i);
@@ -67,15 +118,17 @@ export default function Saved() {
                     </div>
                   );
                 })
-              : savedAnime.map((saved) => {
-                  const { name, imageSrc, animeId } = saved;
+              : Object.keys(indexedAnimeList).map((key) => {
+                  const saved = indexedAnimeList[key];
+                  const { name, imageSrc, animeId, isSaved } = saved;
                   return (
                     <AnimeCard
                       key={animeId}
                       name={name}
                       imageSrc={imageSrc}
                       animeId={animeId}
-                      saved={true}
+                      isSaved={isSaved}
+                      setSavedAnime={setSavedAnime}
                     ></AnimeCard>
                   );
                 })}

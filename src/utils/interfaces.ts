@@ -1,12 +1,13 @@
 export interface Download {
   id: string;
   isReady: boolean;
-  fileUrl: string;
+  link: string;
+  service: string;
   fileName: string;
   date: string;
   anime: string;
   episodeId: number;
-  title: string;
+  name: string;
   imageSrc: string;
   progress: number;
   totalSize?: number;
@@ -26,4 +27,12 @@ export interface FieldInfo {
   placeholder: string;
   type: string;
   validation: any;
+}
+
+export interface Anime {
+  animeId: string;
+  name: string;
+  imageSrc: string;
+  isSaved: boolean;
+  weekDay: string;
 }

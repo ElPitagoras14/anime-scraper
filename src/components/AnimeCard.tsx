@@ -14,12 +14,14 @@ import {
 } from "./ui/tooltip";
 import axios from "axios";
 import { Icons } from "./ui/icons";
+import { signOut, useSession } from "next-auth/react";
 
 interface AnimeCardProps {
   name: string;
   imageSrc: string;
   animeId: string;
-  saved: boolean;
+  isSaved: boolean;
+  setSavedAnime: (animeId: string, isSaved: boolean) => void;
 }
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -28,72 +30,69 @@ export const AnimeCard = ({
   name,
   imageSrc,
   animeId,
-  saved,
+  isSaved,
+  setSavedAnime,
 }: AnimeCardProps) => {
+  const { data } = useSession();
+  const { user: { token = "" } = {} } = data || {};
   const { toast } = useToast();
   const router = useRouter();
 
-  const [isSaved, setIsSaved] = useState<boolean>(saved);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingSaving, setIsLoadingSaving] = useState<boolean>(false);
 
-  const saveAnime = () => {
-    setIsLoading(true);
-    const options = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      url: `${BACKEND_URL}/api/v2/animes/saved`,
-      data: {
-        anime_id: animeId,
-        name,
-        image_src: imageSrc,
-        week_day: null,
-      },
-    };
-    axios(options)
-      .then((response) => {
-        setIsSaved(true);
+  const changeSavedAnime = async (isSaving: boolean) => {
+    console.log("isSaving", isSaving);
+    setIsLoadingSaving(true);
+    try {
+      const saveOptions = {
+        method: isSaving ? "POST" : "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        url: `${BACKEND_URL}/api/v2/animes/saved/${animeId}`,
+      };
+      await axios(saveOptions);
+      toast({
+        title: `${name} ${isSaving ? "added to" : "removed from"} saved`,
+      });
+
+      setSavedAnime(animeId, isSaving);
+    } catch (error: any) {
+      if (!error.response) {
         toast({
-          title: `${name} added to saved`,
-        });
-      })
-      .catch((error) => {
-        toast({
-          title: "Error saving anime",
+          title: `Error ${isSaving ? "saving" : "removing"} anime`,
           description: "Please try again later",
         });
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  };
+      }
 
-  const unsaveAnime = () => {
-    setIsLoading(true);
-    const options = {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      url: `${BACKEND_URL}/api/v2/animes/saved/single/${animeId}`,
-    };
-    axios(options)
-      .then((response) => {
-        setIsSaved(false);
+      const { response: { status = 500 } = {} } = error;
+
+      if (status === 401) {
         toast({
-          title: `${name} removed from saved`,
+          title: "Unauthorized",
+          description: "Please login again",
         });
-      })
-      .catch((error) => {
+        await signOut({
+          callbackUrl: "/login",
+        });
+      }
+
+      if (status === 409) {
         toast({
-          title: "Error removing anime",
+          title: `${name} already ${isSaving ? "saved" : "unsaved"}`,
+        });
+      }
+
+      if (status === 500) {
+        toast({
+          title: "Server error",
           description: "Please try again later",
         });
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+      }
+    } finally {
+      setIsLoadingSaving(false);
+    }
   };
 
   return (
@@ -110,21 +109,16 @@ export const AnimeCard = ({
           layout="fill"
           className="rounded-md object-cover"
         />
-        {/* <div
+        <div
           className={`absolute top-0.5 end-0.5 pt-[0.3rem] px-[0.2rem] m-1 rounded-md bg-[#020817]/80`}
-          onClick={(e) => {
+          onClick={async (e) => {
             e.stopPropagation();
-            if (isSaved) {
-              unsaveAnime();
-            } else {
-              saveAnime();
-            }
-            setIsSaved(!isSaved);
+            await changeSavedAnime(!isSaved);
           }}
         >
           <TooltipProvider>
             <Tooltip>
-              {isLoading ? (
+              {isLoadingSaving ? (
                 <Icons.spinner className="h-5 lg:h-6 w-5 lg:w-6 mb-1 animate-spin" />
               ) : isSaved ? (
                 <>
@@ -146,7 +140,7 @@ export const AnimeCard = ({
               )}
             </Tooltip>
           </TooltipProvider>
-        </div> */}
+        </div>
       </div>
       <TypographyH5 className="text-center mt-4 text-wrap min-w-[120px] w-[20vw] lg:w-[20vw] lg:max-w-[180px]">
         {name}

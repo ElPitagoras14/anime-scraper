@@ -78,15 +78,15 @@ export const Header = () => {
               </div>
               <AccordionContent>
                 <div className="flex flex-col items-end space-y-2 pr-2">
-                  {/* <Link href={"/scraper/saved"} className="hover:text-primary">
+                  <Link href={"/scraper/saved"} className="hover:text-primary">
                     <TypographyH5>Saved Anime</TypographyH5>
-                  </Link> */}
-                  {/* <Link
+                  </Link>
+                  <Link
                     href={"/scraper/calendar"}
                     className="hover:text-primary"
                   >
                     <TypographyH5>Calendar</TypographyH5>
-                  </Link> */}
+                  </Link>
                   <Link
                     href={"/scraper/downloads"}
                     className=" flex items-center space-x-1 hover:text-primary"
@@ -126,12 +126,12 @@ export const Header = () => {
               <TypographyH4>Anime Scraper</TypographyH4>
             </div>
             <div className="flex items-center space-x-6 text-nowrap">
-              {/* <Link href={"/scraper/saved"} className="hover:text-primary">
+              <Link href={"/scraper/saved"} className="hover:text-primary">
                 <Bookmark></Bookmark>
-              </Link> */}
-              {/* <Link href={"/scraper/calendar"} className="hover:text-primary">
+              </Link>
+              <Link href={"/scraper/calendar"} className="hover:text-primary">
                 <CalendarDays></CalendarDays>
-              </Link> */}
+              </Link>
               <Link
                 href={"/scraper/downloads"}
                 className="hover:text-primary flex items-center space-x-1"

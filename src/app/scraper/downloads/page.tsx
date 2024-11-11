@@ -199,7 +199,7 @@ export default function Downloads() {
                   const {
                     id,
                     anime,
-                    title,
+                    name,
                     totalSize,
                     imageSrc,
                     date,
@@ -209,7 +209,7 @@ export default function Downloads() {
                     <DownloadCard
                       key={id}
                       anime={anime}
-                      title={title}
+                      episodeName={name}
                       imageSrc={imageSrc}
                       date={date}
                       isFinished={false}
@@ -229,7 +229,7 @@ export default function Downloads() {
                   const {
                     id,
                     anime,
-                    title,
+                    name,
                     imageSrc,
                     totalSize,
                     date,
@@ -242,7 +242,7 @@ export default function Downloads() {
                     <DownloadCard
                       key={id}
                       anime={anime}
-                      title={title}
+                      episodeName={name}
                       imageSrc={imageSrc}
                       date={date}
                       isFinished={false}

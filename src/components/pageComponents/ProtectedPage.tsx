@@ -5,23 +5,44 @@ import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { useToast } from "../ui/use-toast";
 import { useEffect, useState } from "react";
+import { Icons } from "../ui/icons";
 
 export default function ProtectedPage({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { data, status, update } = useSession();
+  const { data, status, update } = useSession({
+    required: true,
+    onUnauthenticated() {
+      router.push("/login");
+    },
+  });
   const router = useRouter();
-  const { toast } = useToast();
   const [sessionExpired, setSessionExpired] = useState(false);
 
   const { user: { token = "" } = {} } = data || {};
 
   useEffect(() => {
-    const interval = setInterval(() => update(), 20 * 60 * 1000);
+    (async () => {
+      if (status === "authenticated" && token && !sessionExpired) {
+        console.log("Checking token expiration");
+        const { exp } = jwtDecode(token);
+        const now = Date.now() / 1000;
+
+        if (!exp || exp < now) {
+          setSessionExpired(true);
+          (async () => {
+            await signOut({ callbackUrl: "/login" });
+          })();
+        }
+      }
+    })();
+    const interval = setInterval(() => {
+      update();
+    }, 20 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [update]);
+  }, [update, status, token, sessionExpired]);
 
   useEffect(() => {
     const visibilityHandler = () =>
@@ -31,21 +52,12 @@ export default function ProtectedPage({
       window.removeEventListener("visibilitychange", visibilityHandler, false);
   }, [update]);
 
-  if (status === "unauthenticated" && !sessionExpired) {
-    router.push("/login");
-  }
-
-  if (status === "authenticated" && token && !sessionExpired) {
-    const { exp } = jwtDecode(token);
-    const now = Date.now() / 1000;
-
-    if (!exp || exp < now) {
-      setSessionExpired(true);
-      (async () => {
-        await signOut({ redirect: false });
-        router.push("/login");
-      })();
-    }
+  if (status === "loading") {
+    return (
+      <div className="flex justify-center items-center min-h-svh">
+        <Icons.spinner className="h-16 w-16 animate-spin" />
+      </div>
+    );
   }
 
   return <>{children}</>;
