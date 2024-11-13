@@ -16,6 +16,8 @@ import Link from "next/link";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
+import { Icons } from "@/components/ui/icons";
+import { useState } from "react";
 
 const fields = [
   {
@@ -65,6 +67,8 @@ export default function Register() {
     mode: "onChange",
   });
 
+  const [isLoadingLogin, setIsLoadingLogin] = useState(false);
+
   const handleKeyDown = (
     event: React.KeyboardEvent<HTMLInputElement>,
     values: any
@@ -75,6 +79,7 @@ export default function Register() {
   };
 
   const handleLogin = async (data: z.infer<typeof validationSchema>) => {
+    setIsLoadingLogin(true);
     const response = await signIn("credentials", {
       username: data.username,
       password: data.password,
@@ -90,6 +95,8 @@ export default function Register() {
         description: error,
       });
     }
+
+    setIsLoadingLogin(false);
   };
 
   if (status === "authenticated") {
@@ -161,8 +168,17 @@ export default function Register() {
                 size="lg"
                 variant="secondary"
                 onClick={() => handleLogin(form.getValues())}
+                disabled={
+                  isLoadingLogin ||
+                  !form.formState.isDirty ||
+                  !form.formState.isValid
+                }
               >
-                Login
+                {isLoadingLogin ? (
+                  <Icons.spinner className="h-6 w-6 animate-spin" />
+                ) : (
+                  "Login"
+                )}
               </Button>
             </form>
           </Form>

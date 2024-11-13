@@ -42,7 +42,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 interface AnimeInfo {
   name: string;
   description: string;
-  imageSrc: string;
+  image: string;
   isFinished: boolean;
   weekDay: string;
   isSaved: boolean;
@@ -55,13 +55,14 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
   const [animeInfo, setAnimeInfo] = useState<AnimeInfo>({
     name: "",
     description: "",
-    imageSrc: "",
+    image: "",
     isFinished: false,
     weekDay: "",
     isSaved: false,
   });
-  const { name, description, imageSrc, isFinished, weekDay, isSaved } =
+  const { name, description, image, isFinished, weekDay, isSaved } =
     animeInfo || {};
+  const imgb64 = `data:image/jpeg;base64,${image}`;
   const [streamingLinks, setStreamingLinks] = useState([]);
 
   const { toast } = useToast();
@@ -135,11 +136,11 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
         const streamingLinkResponse = await axios(streamingLinkOptions);
         const {
           data: {
-            payload: { episodes },
+            payload: { items },
           },
         } = streamingLinkResponse;
 
-        setStreamingLinks(episodes);
+        setStreamingLinks(items);
       } catch (error: any) {
         if (!error.response) {
           toast({
@@ -195,10 +196,12 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
 
       const response = await axios(downloadRangeOptions);
       const {
-        data: { payload: episodes },
+        data: {
+          payload: { items },
+        },
       } = response;
 
-      episodes.forEach((episode: any) => {
+      items.forEach((episode: any) => {
         const {
           name,
           downloadInfo: { service, link },
@@ -216,7 +219,7 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
             isReady: false,
             episodeId,
             name,
-            imageSrc,
+            image,
             progress: 0,
           })
         );
@@ -258,7 +261,6 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
   };
 
   const changeSavedAnime = async (isSaving: boolean) => {
-    console.log("isSaving", isSaving);
     setIsLoadingSaving(true);
     try {
       const saveOptions = {
@@ -331,7 +333,7 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
             <div className="flex flex-col items-center text-center">
               <div className="relative w-[24vh] h-[36vh] lg:w-[20vw] lg:h-[30vw] flex justify-center">
                 <Image
-                  src={imageSrc}
+                  src={imgb64}
                   alt=""
                   layout="fill"
                   className="rounded-md object-cover"
@@ -448,7 +450,7 @@ export default function AnimeDetail({ params }: { params: { name: string } }) {
                           episodeId={episodeId}
                           name={name}
                           anime={animeId}
-                          imageSrc={imageSrc}
+                          image={image}
                           streamingLink={link}
                         ></EpisodeInfo>
                       );

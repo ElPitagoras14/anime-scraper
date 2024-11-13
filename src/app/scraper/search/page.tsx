@@ -56,9 +56,6 @@ export default function Search() {
           return { ...acc, [animeId]: item };
         }, {});
 
-        console.log("items", items);
-        console.log("indexedItems", indexedItems);
-
         setIndexedAnimeList(indexedItems);
       } catch (error: any) {
         if (!error.response) {
@@ -126,13 +123,13 @@ export default function Search() {
                 })
               : Object.keys(indexedAnimeList).map((key: any) => {
                   const anime = indexedAnimeList[key];
-                  const { name, animeId, imageSrc, isSaved } = anime || {};
+                  const { name, animeId, image, isSaved } = anime || {};
                   return (
                     <AnimeCard
                       key={animeId}
                       name={name}
                       animeId={animeId}
-                      imageSrc={imageSrc}
+                      image={image}
                       isSaved={isSaved}
                       setSavedAnime={setSavedAnime}
                     ></AnimeCard>

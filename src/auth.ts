@@ -10,7 +10,7 @@ interface CustomJWTPayload extends JwtPayload {
   username: string;
   is_admin: boolean;
   is_active: boolean;
-  profileImg: string;
+  avatar: string;
 }
 
 interface CustomUser extends DefaultUser {
@@ -18,7 +18,7 @@ interface CustomUser extends DefaultUser {
   username: string;
   isAdmin: boolean;
   isActive: boolean;
-  profileImg: string;
+  avatar: string;
   token: string;
 }
 
@@ -29,7 +29,7 @@ declare module "next-auth" {
       username: string;
       isAdmin: boolean;
       isActive: boolean;
-      profileImg: string;
+      avatar: string;
       token: string;
     };
   }
@@ -66,35 +66,43 @@ const authOptions: AuthOptions = {
               username,
               is_admin: isAdmin,
               is_active: isActive,
-              profileImg,
+              avatar,
             } = decodedToken;
             const user = {
               id: sub as string,
               username: username as string,
               isAdmin: isAdmin as boolean,
               isActive: isActive as boolean,
-              profileImg: profileImg as string,
+              avatar: avatar as string,
               token,
             };
             return user;
           }
           return null;
-        } catch (error) {
-          throw new Error("Login fallido");
+        } catch (error: any) {
+          if (!error.response) {
+            throw new Error("Connection error");
+          }
+
+          const { response: { data: { message = "" } = {} } = {} } = error;
+          throw new Error(message);
         }
       },
     }),
   ],
-  session: {
-    maxAge: 60 * 60,
-  },
   callbacks: {
-    async jwt({ token, user }: { token: any; user: User }) {
+    async jwt({ token, user, trigger, session }: any) {
       const parsedUser = user as CustomUser;
       if (user) {
         token = {
           ...token,
           ...parsedUser,
+        };
+      }
+      if (trigger === "update" && session) {
+        token = {
+          ...token,
+          ...session,
         };
       }
       return token;

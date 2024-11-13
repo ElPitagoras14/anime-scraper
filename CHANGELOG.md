@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.0] - 2024-11-14
+
+### Added
+
+- Profile configuration feature
+- Manage cache data
+- Manage users
+- Many avatars from Freepik
+- Rewriting of components according to new payload of Scraper API.
+
 ## [2.1.0] - 2024-11-12
 
 ### Added

@@ -52,7 +52,10 @@ export const Header = () => {
               className="py-0 sm:py-1 px-2 sm:px-5 md:px-8 lg:px-12"
             >
               <div className="flex justify-between items-center pl-4">
-                <TypographyH4>Anime Scraper</TypographyH4>
+                <div className="flex space-x-2">
+                  <IconLocationStar className="w-8 h-8" />
+                  <TypographyH4 className="hidden md:block">Anime Scraper</TypographyH4>
+                </div>
                 <div className="flex space-x-2 items-center">
                   <Input
                     value={animeName}

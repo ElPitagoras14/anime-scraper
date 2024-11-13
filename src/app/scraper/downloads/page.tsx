@@ -61,21 +61,7 @@ export default function Downloads() {
 
     const nextDownload = readyDownloads[0];
 
-    const { id, fileUrl, fileName } = nextDownload;
-
-    if (browserUse) {
-      dispatch(quitFromQueue({ id }));
-      const link = document.createElement("a");
-      link.href = fileUrl;
-      if (fileUrl.includes("streamtape")) {
-        link.target = "_blank";
-      }
-      link.setAttribute("download", fileName || "");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      return;
-    }
+    const { id, link, fileName } = nextDownload;
 
     const controller = new AbortController();
     const signal = controller.signal;
@@ -87,7 +73,7 @@ export default function Downloads() {
     dispatch(startDownload({ id }));
 
     axios
-      .get(fileUrl, {
+      .get(link, {
         responseType: "blob",
         onDownloadProgress: (progressEvent) => {
           const { total: eventTotal, loaded } = progressEvent;
@@ -126,9 +112,7 @@ export default function Downloads() {
 
   const handleCancelDownload = (id: string) => {
     const controller = controllers[id];
-    console.log("Controller-Cancel", controller);
     if (controller) {
-      console.log("Aborting download", id);
       controller.abort();
     }
     dispatch(cancelDownload({ id }));
@@ -196,21 +180,14 @@ export default function Downloads() {
               </AccordionTrigger>
               <AccordionContent className="flex flex-col space-y-4">
                 {downloading.map((download: Download) => {
-                  const {
-                    id,
-                    anime,
-                    name,
-                    totalSize,
-                    imageSrc,
-                    date,
-                    progress,
-                  } = download || {};
+                  const { id, anime, name, totalSize, image, date, progress } =
+                    download || {};
                   return (
                     <DownloadCard
                       key={id}
                       anime={anime}
                       episodeName={name}
-                      imageSrc={imageSrc}
+                      image={image}
                       date={date}
                       isFinished={false}
                       progress={progress}
@@ -226,15 +203,8 @@ export default function Downloads() {
               <AccordionTrigger>Queue ({queue.length})</AccordionTrigger>
               <AccordionContent className="flex flex-col space-y-4">
                 {queue.map((download: Download) => {
-                  const {
-                    id,
-                    anime,
-                    name,
-                    imageSrc,
-                    totalSize,
-                    date,
-                    progress,
-                  } = download || {};
+                  const { id, anime, name, image, totalSize, date, progress } =
+                    download || {};
                   const isReady = queue.find(
                     (download: Download) => download.id === id
                   )?.isReady;
@@ -243,7 +213,7 @@ export default function Downloads() {
                       key={id}
                       anime={anime}
                       episodeName={name}
-                      imageSrc={imageSrc}
+                      image={image}
                       date={date}
                       isFinished={false}
                       progress={progress}

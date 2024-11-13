@@ -18,7 +18,7 @@ import { signOut, useSession } from "next-auth/react";
 
 interface AnimeCardProps {
   name: string;
-  imageSrc: string;
+  image: string;
   animeId: string;
   isSaved: boolean;
   setSavedAnime: (animeId: string, isSaved: boolean) => void;
@@ -28,7 +28,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export const AnimeCard = ({
   name,
-  imageSrc,
+  image,
   animeId,
   isSaved,
   setSavedAnime,
@@ -41,9 +41,18 @@ export const AnimeCard = ({
   const [isLoadingSaving, setIsLoadingSaving] = useState<boolean>(false);
 
   const changeSavedAnime = async (isSaving: boolean) => {
-    console.log("isSaving", isSaving);
     setIsLoadingSaving(true);
     try {
+      const animeInfoOptions = {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        url: `${BACKEND_URL}/api/v2/animes/info/${animeId}`,
+      };
+      await axios(animeInfoOptions);
+
       const saveOptions = {
         method: isSaving ? "POST" : "DELETE",
         headers: {
@@ -104,7 +113,7 @@ export const AnimeCard = ({
         }}
       >
         <Image
-          src={imageSrc}
+          src={image}
           alt=""
           layout="fill"
           className="rounded-md object-cover"

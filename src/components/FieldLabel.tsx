@@ -11,11 +11,13 @@ import { Input } from "./ui/input";
 interface FieldLabelProps {
   fieldInfo: FieldInfo;
   formContext: any;
+  className?: string;
 }
 
 export default function FieldLabel({
   fieldInfo,
   formContext,
+  className,
 }: FieldLabelProps) {
   const { name, label, placeholder, type } = fieldInfo;
   return (
@@ -23,8 +25,8 @@ export default function FieldLabel({
       control={formContext.control}
       name={name}
       render={({ field }) => (
-        <FormItem>
-          <Label>{label}</Label>
+        <FormItem className={className}>
+          <Label className="text-muted-foreground">{label}</Label>
           <FormControl>
             <Input
               {...field}

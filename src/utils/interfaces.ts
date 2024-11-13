@@ -8,16 +8,9 @@ export interface Download {
   anime: string;
   episodeId: number;
   name: string;
-  imageSrc: string;
+  image: string;
   progress: number;
   totalSize?: number;
-}
-
-export interface Saved {
-  animeId: string;
-  name: string;
-  imageSrc: string;
-  weekDay: string;
 }
 
 export interface FieldInfo {
@@ -32,7 +25,7 @@ export interface FieldInfo {
 export interface Anime {
   animeId: string;
   name: string;
-  imageSrc: string;
+  image: string;
   isSaved: boolean;
   weekDay: string;
 }

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { TypographyH2 } from "@/components/ui/typography";
 import { useToast } from "@/components/ui/use-toast";
-import { Anime, Saved as SavedInterface } from "@/utils/interfaces";
+import { Anime } from "@/utils/interfaces";
 import axios from "axios";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
@@ -20,7 +20,7 @@ import { useEffect, useState } from "react";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-const CalendarAnimesComponent = ({ animes }: { animes: SavedInterface[] }) => {
+const CalendarAnimesComponent = ({ animes }: { animes: Anime[] }) => {
   if (!animes) {
     return null;
   }
@@ -42,7 +42,7 @@ const CalendarAnimesComponent = ({ animes }: { animes: SavedInterface[] }) => {
 
 export default function CalendarPage() {
   const { data } = useSession();
-  const { user : { token = "" } = {} } = data || {};
+  const { user: { token = "" } = {} } = data || {};
 
   const [animeList, setAnimeList] = useState<Anime[]>([]);
   const [isLoadingSavedList, setIsLoadingSavedList] = useState(true);
@@ -54,7 +54,7 @@ export default function CalendarPage() {
     }
     acc[weekDay].push(anime);
     return acc;
-  }, {} as Record<string, SavedInterface[]>);
+  }, {} as Record<string, Anime[]>);
 
   const { toast } = useToast();
 

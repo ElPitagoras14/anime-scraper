@@ -13,6 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import FieldLabel from "@/components/FieldLabel";
 import Link from "next/link";
+import axios from "axios";
+import { useToast } from "@/components/ui/use-toast";
+import { signOut } from "next-auth/react";
+import { Icons } from "@/components/ui/icons";
+import { useState } from "react";
 
 const fields = [
   {
@@ -68,15 +73,77 @@ const initialValues = fields.reduce((acc, field) => {
   return acc;
 }, {} as any);
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 export default function Register() {
+  const { toast } = useToast();
+  const [isLoadingRegister, setIsLoadingRegister] = useState(false);
+
   const form = useForm<z.infer<typeof validationSchema>>({
     resolver: zodResolver(validationSchema),
     defaultValues: initialValues,
     mode: "onChange",
   });
 
-  const onSubmit = (data: z.infer<typeof validationSchema>) => {
-    console.log(data);
+  const onSubmit = async () => {
+    setIsLoadingRegister(true);
+    const data = form.getValues();
+    try {
+      const avatarsOptions = {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        url: `/api/users/avatars`,
+      };
+
+      const avatarsResponse = await axios(avatarsOptions);
+      const { data: avatars } = avatarsResponse;
+      const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+
+      const registerOptions = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        url: `${BACKEND_URL}/api/v2/auth/register`,
+        data: { ...data, avatar: randomAvatar },
+      };
+
+      await axios(registerOptions);
+      form.reset();
+
+      toast({
+        title: "Account created",
+        description:
+          "You have successfully created an account, please contact an admin to activate it",
+      });
+    } catch (error: any) {
+      if (!error.response) {
+        toast({
+          title: "Error",
+          description: "Something went wrong, please try again later",
+        });
+      }
+
+      const { response: { status = 500 } = {} } = error;
+
+      if (status === 409) {
+        toast({
+          title: "Conflict",
+          description: "Username already exists",
+        });
+      }
+
+      if (status === 500) {
+        toast({
+          title: "Internal server error",
+          description: "Please try again later",
+        });
+      }
+    } finally {
+      setIsLoadingRegister(false);
+    }
   };
 
   return (
@@ -131,8 +198,21 @@ export default function Register() {
                 />
               ))}
               <div className="py-2"></div>
-              <Button type="submit" size="lg" variant="secondary" className="">
-                Register
+              <Button
+                type="submit"
+                size="lg"
+                variant="secondary"
+                disabled={
+                  isLoadingRegister ||
+                  !form.formState.isDirty ||
+                  !form.formState.isValid
+                }
+              >
+                {isLoadingRegister ? (
+                  <Icons.spinner className="h-6 w-6 animate-spin" />
+                ) : (
+                  "Register"
+                )}
               </Button>
             </form>
           </Form>

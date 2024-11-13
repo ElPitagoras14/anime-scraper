@@ -22,7 +22,7 @@ interface EpisodeInfoProps {
   streamingLink: string;
   episodeId: number;
   name: string;
-  imageSrc: string;
+  image: string;
 }
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -32,7 +32,7 @@ export const EpisodeInfo = ({
   streamingLink,
   episodeId,
   name,
-  imageSrc,
+  image,
 }: EpisodeInfoProps) => {
   const { data } = useSession();
   const { user: { token = "" } = {} } = data || {};
@@ -53,7 +53,7 @@ export const EpisodeInfo = ({
         anime,
         episodeId,
         name,
-        imageSrc,
+        image,
         progress: 0,
       })
     );

@@ -4,7 +4,7 @@ import { AnimeCard } from "@/components/AnimeCard";
 import { Header } from "@/components/pageComponents/Header";
 import { TypographyH2 } from "@/components/ui/typography";
 import { useEffect, useState } from "react";
-import { Anime, Saved as SavedInterface } from "@/utils/interfaces";
+import { Anime } from "@/utils/interfaces";
 import axios from "axios";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
@@ -47,15 +47,11 @@ export default function Saved() {
           return { ...acc, [animeId]: item };
         }, {});
 
-        console.log("indexedItems", items);
-
-        if (Object.keys(indexedAnimeList).length === 0) {
-          setIndexedAnimeList(indexedItems);
-          toast({
-            title: "Success",
-            description: "Fetched data successfully",
-          });
-        }
+        setIndexedAnimeList(indexedItems);
+        toast({
+          title: "Success",
+          description: "Fetched data successfully",
+        });
       } catch (error: any) {
         if (!error.response) {
           toast({
@@ -86,7 +82,8 @@ export default function Saved() {
         setIsLoadingSavedList(false);
       }
     })();
-  }, [toast, indexedAnimeList, token]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast, token]);
 
   const setSavedAnime = (animeId: string, isSaved: boolean) => {
     setIndexedAnimeList((prev) => {
@@ -120,12 +117,13 @@ export default function Saved() {
                 })
               : Object.keys(indexedAnimeList).map((key) => {
                   const saved = indexedAnimeList[key];
-                  const { name, imageSrc, animeId, isSaved } = saved;
+                  const { name, image, animeId, isSaved } = saved;
+                  const img64 = `data:image/png;base64,${image}`;
                   return (
                     <AnimeCard
                       key={animeId}
                       name={name}
-                      imageSrc={imageSrc}
+                      image={img64}
                       animeId={animeId}
                       isSaved={isSaved}
                       setSavedAnime={setSavedAnime}

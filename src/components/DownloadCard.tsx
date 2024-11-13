@@ -12,7 +12,7 @@ import { useAppSelector } from "@/redux/hooks";
 interface DownloadCardProps {
   anime: string;
   episodeName: string;
-  imageSrc: string;
+  image: string;
   date: string;
   isFinished: boolean;
   progress: number;
@@ -33,7 +33,7 @@ const formatFileSize = (bytes: number): string => {
 export const DownloadCard = ({
   anime,
   episodeName,
-  imageSrc,
+  image,
   date,
   isFinished,
   progress,
@@ -50,12 +50,13 @@ export const DownloadCard = ({
 
   const [isLoadingPlay, setIsLoadingPlay] = useState<Boolean>(false);
   const [isLoadingDelete, setIsLoadingDelete] = useState<Boolean>(false);
+  const imgb64 = `data:image/jpeg;base64,${image}`;
 
   return (
     <Card>
       <div className="relative flex items-center space-x-4 p-2 lg:p-4">
         <Image
-          src={imageSrc}
+          src={imgb64}
           alt={""}
           width={70}
           height={70}
