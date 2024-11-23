@@ -2,12 +2,11 @@ import Image from "next/image";
 import { Card } from "./ui/card";
 import { TypographyH6, TypographySmall } from "./ui/typography";
 import { Progress } from "./ui/progress";
-import { Play, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "./ui/button";
-import { format, set } from "date-fns";
+import { format } from "date-fns";
 import { useState } from "react";
 import { Icons } from "./ui/icons";
-import { useAppSelector } from "@/redux/hooks";
 
 interface DownloadCardProps {
   anime: string;
@@ -42,13 +41,9 @@ export const DownloadCard = ({
   deleteFn,
   playFn,
 }: DownloadCardProps) => {
-  const { browserUse } = useAppSelector(
-    (state: { downloadReducer: any }) => state.downloadReducer
-  );
   const newDate = new Date(date);
   const formattedDate = format(newDate, "yyyy-MM-dd HH:mm");
 
-  const [isLoadingPlay, setIsLoadingPlay] = useState<Boolean>(false);
   const [isLoadingDelete, setIsLoadingDelete] = useState<Boolean>(false);
   const imgb64 = `data:image/jpeg;base64,${image}`;
 
@@ -77,33 +72,6 @@ export const DownloadCard = ({
             progressColor={isFinished ? "bg-accent" : "bg-primary"}
           ></Progress>
         </div>
-        {browserUse &&
-          !isReady &&
-          (!isLoadingPlay ? (
-            <Button
-              className="absolute top-2 end-12 rounded-full m-0 px-2 py-2"
-              variant="ghost"
-            >
-              <Play
-                className="h-6 w-6"
-                onClick={() => {
-                  setIsLoadingPlay(true);
-                  setTimeout(() => {
-                    if (playFn) {
-                      playFn();
-                    }
-                  }, 200);
-                }}
-              ></Play>
-            </Button>
-          ) : (
-            <Button
-              className="absolute top-2 end-12 rounded-full m-0 px-2 py-2"
-              variant="ghost"
-            >
-              <Icons.spinner className="h-6 w-6 animate-spin" />
-            </Button>
-          ))}
         {isLoadingDelete ? (
           <Button
             className="absolute top-2 end-2 rounded-full m-0 px-2 py-2"

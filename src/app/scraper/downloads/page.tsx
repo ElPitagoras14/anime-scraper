@@ -29,10 +29,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function Downloads() {
-  const { queue, downloading, browserUse, maxConcurrentDownloads } =
-    useAppSelector((state: { downloadReducer: any }) => state.downloadReducer);
+  const { queue, downloading, maxConcurrentDownloads } = useAppSelector(
+    (state: { downloadReducer: any }) => state.downloadReducer
+  );
 
-  const [isPaused, setIsPaused] = useState<boolean>(!browserUse);
+  const [isPaused, setIsPaused] = useState<boolean>(true);
   const [controllers, setControllers] = useState<
     Record<string, AbortController>
   >({});
@@ -51,9 +52,7 @@ export default function Downloads() {
       return;
     }
 
-    const readyDownloads = browserUse
-      ? queue.filter((download: Download) => download.isReady)
-      : queue;
+    const readyDownloads = queue;
 
     if (readyDownloads.length === 0) {
       return;
