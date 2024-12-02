@@ -1,26 +1,32 @@
-# Ignorar node_modules
-node_modules
+# Ignorar archivos generados por Node.js
+node_modules/
 
-# Ignorar archivos de log
-*.log
+# Ignorar el directorio de Next.js
+.next/
 
-# Ignorar directorios de tests
-tests
+# Archivos de configuración local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Ignorar el archivo .env
-.env
+# Ignorar archivos de caché
+.cache/
 
-# Ignorar archivos de configuración de desarrollo
-docker-compose*.yml
+# Archivos de configuración de IDE
+.vscode/
 
-# Ignorar archivos de configuración de Git
-.git
-.gitignore
-
-# Ignorar archivos de configuración de Docker
+# Archivos de Docker
+docker-compose.yml
+docker-compose.override.yml
 Dockerfile
 
-# Ignorar otros archivos y directorios innecesarios
-.dockerignore
-.vscode
-*.md
+# Archivos de build para producción
+out/
+
+# Archivos generados por sistemas operativos
+.DS_Store
+Thumbs.db
+
+# Archivos de log
+*.log

@@ -1,0 +1,60 @@
+version: "3"
+services:
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "${WEB_PORT}:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+      - NEXT_PUBLIC_SERVER_BACKEND_URL=http://api:${API_PORT}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    container_name: web
+    restart: always
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "${API_PORT}:8000"
+    environment:
+      - API_HOST=${API_HOST}
+      - API_PORT=8000
+      - APP_NAME=${APP_NAME}
+      - APP_ADMIN_USER=${APP_ADMIN_USER}
+      - APP_ADMIN_PASS=${APP_ADMIN_PASS}
+      - AUTH_SECRET_KEY=${AUTH_SECRET_KEY}
+      - AUTH_ALGORITHM=${AUTH_ALGORITHM}
+      - AUTH_EXPIRE_MINUTES=${AUTH_EXPIRE_MINUTES}
+      - LOG_APP_PATH=${LOG_APP_PATH}
+      - LOG_ERROR_PATH=${LOG_ERROR_PATH}
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASS=${POSTGRES_PASS}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE}
+    volumes:
+      - ${LOG_FOLDER_HOST_PATH}/api-logs:/var/log/scraper-anime
+    depends_on:
+      - db
+    container_name: api
+    restart: always
+
+  db:
+    image: postgres:17.0
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASS}
+      - POSTGRES_DB=${POSTGRES_DATABASE}
+    volumes:
+      - ${LOG_FOLDER_HOST_PATH}/postgres-logs:/var/log/postgresql
+      - ${LOG_FOLDER_HOST_PATH}/postgres-data:/var/lib/postgresql/data
+      - ./backend/src/databases/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    container_name: db
+    restart: always
