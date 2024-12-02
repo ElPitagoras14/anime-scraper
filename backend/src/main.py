@@ -14,8 +14,8 @@ from watchgod import run_process
 
 from packages.auth import get_password_hash
 
-HOST = general_settings.HOST
-PORT = general_settings.PORT
+HOST = general_settings.API_HOST
+PORT = general_settings.API_PORT
 APP_NAME = general_settings.APP_NAME
 SECRET_KEY = general_settings.AUTH_SECRET_KEY
 ALGORITHM = general_settings.AUTH_ALGORITHM
@@ -28,9 +28,7 @@ configure_logs()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     with DatabaseSession() as db:
-        root_user = (
-            db.query(User).filter(User.is_admin).first()
-        )
+        root_user = db.query(User).filter(User.is_admin).first()
         if not root_user:
             hashed_password = get_password_hash(APP_ADMIN_PASS)
             root_user = User(
@@ -38,6 +36,7 @@ async def lifespan(app: FastAPI):
                 password=hashed_password,
                 is_admin=True,
                 is_active=True,
+                avatar="penguin.png",
             )
             db.add(root_user)
             db.commit()

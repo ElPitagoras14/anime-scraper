@@ -4,8 +4,8 @@ from pydantic_settings import SettingsConfigDict
 
 
 class GeneralSettings(BaseSettings):
-    HOST: str
-    PORT: int
+    API_HOST: str
+    API_PORT: int
     APP_NAME: str
 
     APP_ADMIN_USER: str

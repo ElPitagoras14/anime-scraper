@@ -3,11 +3,9 @@ FROM python:3.12
 WORKDIR /app
 
 COPY src /app/src
-COPY Dockerfile /app
 COPY requirements.txt /app
-COPY docker-compose.yaml /app
 
-ENV IN_DOCKER=true
+RUN mkdir -p /var/log/scraper-anime
 
 RUN pip install -r requirements.txt
 RUN playwright install chromium

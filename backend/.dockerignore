@@ -1,0 +1,39 @@
+# Ignorar archivos y directorios de configuración local
+*.env
+.env.local
+.env.*.local
+
+# Ignorar archivos de configuración de IDEs
+.vscode/
+.idea/
+
+# Ignorar archivos de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+
+# Ignorar archivos de dependencias y directorios de virtualenv
+venv/
+env/
+*.egg-info/
+*.egg
+
+# Ignorar archivos de logs
+*.log
+
+# Ignorar archivos de tests
+tests/
+test/
+
+# Ignorar archivos de documentación (si no es necesario en el contenedor)
+docs/
+
+# Ignorar cualquier archivo temporal o backup
+*.bak
+*.swp
+
+# Ignorar archivos de Docker
+Dockerfile
+docker-compose.yml
