@@ -222,6 +222,7 @@ async def get_range_episodes_download_links(
         else range(1, len(episode_links) + 1)
     )
     logger.info(f"Getting download links for episodes {episodes}")
+    logger.info(f"Episode links {episode_links}")
 
     results = []
     tasks = []
@@ -235,7 +236,9 @@ async def get_range_episodes_download_links(
 
     download_links = []
     not_valid_cnt = 0
-    for idx, download_link in enumerate(results, 1):
+    for i in range(len(results)):
+        download_link = results[i]
+        idx = episodes[i]
         if not download_link:
             not_valid_cnt += 1
             continue
