@@ -29,3 +29,14 @@ export interface Anime {
   isSaved: boolean;
   weekDay: string;
 }
+
+export interface QueryParams {
+  sorting?: {
+    id?: string;
+    desc?: boolean;
+  }[];
+  pagination?: {
+    pageIndex?: number;
+    pageSize?: number;
+  };
+}

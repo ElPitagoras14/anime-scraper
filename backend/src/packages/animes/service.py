@@ -2,7 +2,7 @@ import base64
 from decimal import Decimal
 import aiohttp
 from loguru import logger
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from bs4 import BeautifulSoup
 from sqlalchemy import exists, text
 
@@ -26,6 +26,23 @@ from .utils import (
 )
 
 HOST = "https://www3.animeflv.net"
+
+
+def get_last_weekday(target_weekday: str) -> datetime:
+    if not target_weekday:
+        return None
+    weekdays = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    ]
+    today = datetime.now(timezone.utc)
+    days_difference = (today.weekday() - weekdays.index(target_weekday)) % 7
+    return today - timedelta(days=days_difference)
 
 
 def get_anime_cards(page: str):
@@ -85,12 +102,13 @@ async def get_anime_info_controller(anime: str, current_user: dict):
             today_weekday = today.strftime("%A")
 
             anime_info.last_peek = datetime.now(timezone.utc)
+            last_weekday = get_last_weekday(anime_week_day)
 
             if (
                 anime_is_finished
                 or not anime_week_day
                 or anime_week_day != today_weekday
-                or (today - anime_last_peek).days > 7
+                or anime_last_peek >= last_weekday
             ):
                 logger.info(f"Found anime {anime} in cache database")
                 anime_response = cast_anime_info(
@@ -206,7 +224,6 @@ async def search_anime_query_controller(query: str, current_user: dict):
 
 
 async def get_streaming_links_controller(anime_name: str):
-    print("anime_name", anime_name)
     with DatabaseSession() as db:
         last_episode = None
         anime = db.query(Anime).filter(Anime.id == anime_name).first()
@@ -395,10 +412,27 @@ async def delete_saved_anime_controller(anime_id: str, current_user: dict):
         )
 
 
-async def get_all_animes_cache_controller():
+async def get_all_animes_cache_controller(
+    sort_by: str, desc: bool, page: int, size: int
+):
+    sort_column = "total_cache_in_kb"
+    order = "DESC"
+    if sort_by is not None:
+        sort_column = sort_by
+        order = "DESC" if desc else "ASC"
+
     with DatabaseSession() as db:
-        query = text(
+        count_query = text(
             """
+            SELECT
+                COUNT(*)
+            FROM
+                animes
+            """
+        )
+        total = db.execute(count_query).fetchone()[0]
+        query = text(
+            f"""
             WITH
             serie_cache AS (
                 SELECT
@@ -428,7 +462,8 @@ async def get_all_animes_cache_controller():
                 episodes_cache
             ON
                 serie_cache.id = episodes_cache.anime_id
-            ORDER BY total_cache_in_kb DESC;
+            ORDER BY {sort_column} {order}
+            {f"LIMIT {size} OFFSET {size * page}" if size != -1 else ""};
             """
         )
 
@@ -441,7 +476,7 @@ async def get_all_animes_cache_controller():
             }
             for result in results
         ]
-        return cast_anime_size_list(clean_results)
+        return cast_anime_size_list(clean_results, total)
 
 
 async def delete_anime_cache_controller(anime_id: str):

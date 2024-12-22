@@ -1,20 +1,20 @@
 "use client";
 
-import { TableCell, TableRow } from "../ui/table";
+import { TableCell, TableRow } from "./ui/table";
 import { Download, Play } from "lucide-react";
 import { useAppDispatch } from "@/redux/hooks";
 import { addToQueue } from "@/redux/features/downloadSlice";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
 import { useState } from "react";
-import { useToast } from "../ui/use-toast";
+import { useToast } from "./ui/use-toast";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Icons } from "../ui/icons";
+import { Icons } from "./ui/icons";
 import { signOut, useSession } from "next-auth/react";
 
 interface EpisodeInfoProps {
@@ -110,16 +110,6 @@ export const EpisodeInfo = ({
       }
 
       const { response: { status = 500 } = {} } = error;
-
-      if (status === 401) {
-        toast({
-          title: "Unauthorized",
-          description: "Please login again",
-        });
-        await signOut({
-          callbackUrl: "/login",
-        });
-      }
 
       if (status === 500) {
         toast({

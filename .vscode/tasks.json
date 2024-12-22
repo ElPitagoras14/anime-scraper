@@ -2,19 +2,14 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Setup Dev Env - Windows",
+      "label": "Setup Dev Env",
       "type": "shell",
-      "command": "${workspaceFolder}/setup-dev.bat",
-      "group": {
-        "kind": "build",
-        "isDefault": true
+      "windows": {
+        "command": "${workspaceFolder}/scripts/setup-dev.bat"
       },
-      "problemMatcher": []
-    },
-    {
-      "label": "Setup Dev Env - Linux",
-      "type": "shell",
-      "command": "${workspaceFolder}/setup-dev.sh",
+      "linux": {
+        "command": "${workspaceFolder}/scripts/setup-dev.sh"
+      },
       "group": {
         "kind": "build",
         "isDefault": true
@@ -32,17 +27,19 @@
     },
     {
       "label": "Run Frontend",
-      "type": "npm",
-      "script": "dev",
-      "options": {
-        "cwd": "${workspaceFolder}/frontend"
+      "type": "shell",
+      "windows": {
+        "command": "${workspaceFolder}/scripts/run-frontend.bat"
+      },
+      "linux": {
+        "command": "${workspaceFolder}/scripts/run-frontend.sh"
       }
     },
     {
       "label": "Deploy with docker-compose",
       "type": "shell",
       "command": "docker-compose",
-      "args": ["up", "-d", "--build"]
+      "args": ["up", "-d", "--build"],
     }
   ]
 }

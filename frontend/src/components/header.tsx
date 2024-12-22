@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ModeToggle } from "../ModeToggle";
-import { TypographyH4, TypographyH5, TypographyH6 } from "../ui/typography";
+import { ModeToggle } from "./mode-toggle";
+import { TypographyH4, TypographyH5, TypographyH6 } from "./ui/typography";
 import { Input } from "@/components/ui/input";
-import { Separator } from "../ui/separator";
+import { Separator } from "./ui/separator";
 import {
   Search,
   Settings,
@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "../ui/button";
+import { Button } from "./ui/button";
 import { useAppSelector } from "@/redux/hooks";
 import { useIsMobile } from "@/utils/utils";
 import { IconLocationStar, IconMenu2 } from "@tabler/icons-react";
@@ -24,7 +24,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "../ui/accordion";
+} from "./ui/accordion";
 import { signOut } from "next-auth/react";
 
 export const Header = () => {
@@ -54,7 +54,9 @@ export const Header = () => {
               <div className="flex justify-between items-center pl-4">
                 <div className="flex space-x-2">
                   <IconLocationStar className="w-8 h-8" />
-                  <TypographyH4 className="hidden md:block">Anime Scraper</TypographyH4>
+                  <TypographyH4 className="hidden md:block">
+                    Anime Scraper
+                  </TypographyH4>
                 </div>
                 <div className="flex space-x-2 items-center">
                   <Input
@@ -176,7 +178,7 @@ export const Header = () => {
                   size="icon"
                   onClick={async () => {
                     await signOut({
-                      redirect: false,
+                      redirectTo: "/",
                     });
                   }}
                 >

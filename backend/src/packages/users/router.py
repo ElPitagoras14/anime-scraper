@@ -35,6 +35,10 @@ users_router = APIRouter()
 async def get_all_users(
     request: Request,
     response: Response,
+    sort_by: str = None,
+    desc: bool = None,
+    page: int = 0,
+    size: int = 10,
     current_user: dict = Depends(get_current_user),
 ):
     start_time = time.time()
@@ -48,7 +52,7 @@ async def get_all_users(
                 func="change_user_status",
                 message="Unauthorized",
             )
-        users = get_all_users_controller()
+        users = get_all_users_controller(sort_by, desc, page, size)
         process_time = time.time() - start_time
         logger.info(f"Got users in {process_time:.2f} seconds")
         return UserListOut(

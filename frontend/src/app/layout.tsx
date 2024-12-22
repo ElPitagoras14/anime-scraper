@@ -5,8 +5,7 @@ import { ThemeProvider } from "@/providers/theme-provider";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ReduxProvider } from "@/redux/ReduxProvider";
-import AuthProvider from "@/providers/auth-provider";
-import { getSession } from "@/auth";
+import { SessionProvider } from "next-auth/react";
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -24,7 +23,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getSession();
   return (
     <html lang="en">
       <body
@@ -39,9 +37,9 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider session={session}>
+          <SessionProvider>
             <ReduxProvider>{children}</ReduxProvider>
-          </AuthProvider>
+          </SessionProvider>
           <Toaster></Toaster>
         </ThemeProvider>
       </body>

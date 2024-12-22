@@ -15,10 +15,10 @@ def cast_single_user(user: UserModel):
     )
 
 
-def cast_users_list(users: list[UserModel]):
+def cast_users_list(users: list[UserModel], total: int):
     return UserList(
         items=[cast_single_user(user) for user in users],
-        total=len(users),
+        total=total,
     )
 
 

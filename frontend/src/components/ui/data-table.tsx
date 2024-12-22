@@ -2,13 +2,14 @@
 
 import {
   ColumnDef,
-  ColumnFiltersState,
   flexRender,
   getCoreRowModel,
   useReactTable,
   SortingState,
   getSortedRowModel,
   getFilteredRowModel,
+  PaginationState,
+  getPaginationRowModel,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -18,68 +19,59 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react";
+import { DataTablePagination } from "./data-pagination";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  serverSide?: {
+    totalRows: number;
+    setServerSort: (sort: SortingState) => void;
+    setServerPage: (page: PaginationState) => void;
+  };
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  serverSide,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    onSortingChange: setSorting,
+    getPaginationRowModel: getPaginationRowModel(),
+    onPaginationChange: setPagination,
+    manualPagination: serverSide ? true : false,
+    rowCount: serverSide ? serverSide.totalRows : data.length,
     getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
+    onSortingChange: setSorting,
+    manualSorting: serverSide ? true : false,
     getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
-      columnFilters,
+      pagination,
     },
   });
 
-  const filteringColumns = columns
-    .filter((column) => column.enableColumnFilter)
-    .map((column: any) => ({
-      columnId: column.accessorKey,
-      label: column.label,
-    }));
+  useEffect(() => {
+    console.log("sorting", sorting);
+    if (serverSide) {
+      serverSide.setServerSort(sorting);
+      serverSide.setServerPage(pagination);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sorting, pagination]);
 
   return (
-    <div>
-      {filteringColumns.length > 0 && (
-        <div className="flex items-center pb-4 space-x-4">
-          {filteringColumns.map((column) => {
-            const { columnId, label } = column;
-            return (
-              <Input
-                key={columnId}
-                placeholder={`Filter ${label}`}
-                value={
-                  (table
-                    .getColumn(columnId || "")
-                    ?.getFilterValue() as string) ?? ""
-                }
-                onChange={(event) =>
-                  table
-                    .getColumn(columnId || "")
-                    ?.setFilterValue(event.target.value)
-                }
-                className="max-w-sm"
-              />
-            );
-          })}
-        </div>
-      )}
+    <div className="flex flex-col space-y-2 py-2">
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -130,6 +122,7 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
+      <DataTablePagination table={table} />
     </div>
   );
 }

@@ -121,7 +121,7 @@ def cast_anime_size(anime: str, name: str, size: float):
     return AnimeCache(animeId=anime, name=name, size=size)
 
 
-def cast_anime_size_list(anime_info_list: list[dict]):
+def cast_anime_size_list(anime_info_list: list[dict], total: int):
     return AnimeCacheList(
         items=[
             cast_anime_size(anime["anime_id"], anime["name"], anime["size"])
@@ -129,5 +129,5 @@ def cast_anime_size_list(anime_info_list: list[dict]):
         ],
         size=sum([anime["size"] for anime in anime_info_list]),
         measured_in="KB",
-        total=len(anime_info_list),
+        total=total,
     )

@@ -1,10 +1,14 @@
-import React from "react";
-import ProtectedPage from "@/components/pageComponents/ProtectedPage";
+import { Header } from "@/components/header";
 
 export default function ScraperLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <ProtectedPage>{children}</ProtectedPage>;
+  return (
+    <>
+      <Header></Header>
+      {children}
+    </>
+  );
 }

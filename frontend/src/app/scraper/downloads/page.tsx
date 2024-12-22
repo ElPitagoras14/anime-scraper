@@ -1,7 +1,6 @@
 "use client";
 
-import { DownloadCard } from "@/components/DownloadCard";
-import { Header } from "@/components/pageComponents/Header";
+import { DownloadCard } from "@/app/scraper/downloads/components/donwload-card";
 import {
   Accordion,
   AccordionContent,
@@ -128,106 +127,103 @@ export default function Downloads() {
   };
 
   return (
-    <>
-      <Header></Header>
-      <main className="flex flex-col items-center py-6 lg:py-10">
-        <div className="w-[90%] lg:w-[60%] space-y-4">
-          <div className="flex flex-col lg:flex-row justify-between items-center">
-            <div className="flex flex-col">
-              <TypographyH2>Downloads</TypographyH2>
-              <TypographySmall>
-                Please do not change the page during a download.
-              </TypographySmall>
-            </div>
-            {isPaused ? (
-              <Button
-                size="default"
-                disabled={queue.length === 0}
-                variant="secondary"
-                className="ml-auto"
-                onClick={() => {
-                  setIsPaused(false);
-                  toast({
-                    title: "Downloads started",
-                    description: "Downloads will start shortly",
-                  });
-                }}
-              >
-                <TypographyH5>Start Downloads</TypographyH5>
-              </Button>
-            ) : (
-              <Button
-                size="default"
-                variant="destructive"
-                className="ml-auto"
-                onClick={() => {
-                  setIsPaused(true);
-                  toast({
-                    title: "Downloads stopped",
-                    description: "Downloads will stop shortly",
-                  });
-                }}
-              >
-                <TypographyH5>Stop Downloads</TypographyH5>
-              </Button>
-            )}
+    <main className="flex flex-col items-center py-6 lg:py-10">
+      <div className="w-[90%] lg:w-[60%] space-y-4">
+        <div className="flex flex-col lg:flex-row justify-between items-center">
+          <div className="flex flex-col">
+            <TypographyH2>Downloads</TypographyH2>
+            <TypographySmall>
+              Please do not change the page during a download.
+            </TypographySmall>
           </div>
-          <Accordion type="multiple">
-            <AccordionItem value="downloading">
-              <AccordionTrigger>
-                Downloading ({downloading.length})
-              </AccordionTrigger>
-              <AccordionContent className="flex flex-col space-y-4">
-                {downloading.map((download: Download) => {
-                  const { id, anime, name, totalSize, image, date, progress } =
-                    download || {};
-                  return (
-                    <DownloadCard
-                      key={id}
-                      anime={anime}
-                      episodeName={name}
-                      image={image}
-                      date={date}
-                      isFinished={false}
-                      progress={progress}
-                      totalSize={totalSize}
-                      deleteFn={() => handleCancelDownload(id)}
-                      isReady
-                    ></DownloadCard>
-                  );
-                })}
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="queue">
-              <AccordionTrigger>Queue ({queue.length})</AccordionTrigger>
-              <AccordionContent className="flex flex-col space-y-4">
-                {queue.map((download: Download) => {
-                  const { id, anime, name, image, totalSize, date, progress } =
-                    download || {};
-                  const isReady = queue.find(
-                    (download: Download) => download.id === id
-                  )?.isReady;
-                  return (
-                    <DownloadCard
-                      key={id}
-                      anime={anime}
-                      episodeName={name}
-                      image={image}
-                      date={date}
-                      isFinished={false}
-                      progress={progress}
-                      totalSize={totalSize}
-                      deleteFn={() => handleQuitFromQueue(id)}
-                      playFn={() => handlePlayDownload(id)}
-                      isReady={isReady}
-                    ></DownloadCard>
-                  );
-                })}
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          {isPaused ? (
+            <Button
+              size="default"
+              disabled={queue.length === 0}
+              variant="secondary"
+              className="ml-auto"
+              onClick={() => {
+                setIsPaused(false);
+                toast({
+                  title: "Downloads started",
+                  description: "Downloads will start shortly",
+                });
+              }}
+            >
+              <TypographyH5>Start Downloads</TypographyH5>
+            </Button>
+          ) : (
+            <Button
+              size="default"
+              variant="destructive"
+              className="ml-auto"
+              onClick={() => {
+                setIsPaused(true);
+                toast({
+                  title: "Downloads stopped",
+                  description: "Downloads will stop shortly",
+                });
+              }}
+            >
+              <TypographyH5>Stop Downloads</TypographyH5>
+            </Button>
+          )}
         </div>
-      </main>
-    </>
+        <Accordion type="multiple">
+          <AccordionItem value="downloading">
+            <AccordionTrigger>
+              Downloading ({downloading.length})
+            </AccordionTrigger>
+            <AccordionContent className="flex flex-col space-y-4">
+              {downloading.map((download: Download) => {
+                const { id, anime, name, totalSize, image, date, progress } =
+                  download || {};
+                return (
+                  <DownloadCard
+                    key={id}
+                    anime={anime}
+                    episodeName={name}
+                    image={image}
+                    date={date}
+                    isFinished={false}
+                    progress={progress}
+                    totalSize={totalSize}
+                    deleteFn={() => handleCancelDownload(id)}
+                    isReady
+                  ></DownloadCard>
+                );
+              })}
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="queue">
+            <AccordionTrigger>Queue ({queue.length})</AccordionTrigger>
+            <AccordionContent className="flex flex-col space-y-4">
+              {queue.map((download: Download) => {
+                const { id, anime, name, image, totalSize, date, progress } =
+                  download || {};
+                const isReady = queue.find(
+                  (download: Download) => download.id === id
+                )?.isReady;
+                return (
+                  <DownloadCard
+                    key={id}
+                    anime={anime}
+                    episodeName={name}
+                    image={image}
+                    date={date}
+                    isFinished={false}
+                    progress={progress}
+                    totalSize={totalSize}
+                    deleteFn={() => handleQuitFromQueue(id)}
+                    playFn={() => handlePlayDownload(id)}
+                    isReady={isReady}
+                  ></DownloadCard>
+                );
+              })}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    </main>
   );
 }

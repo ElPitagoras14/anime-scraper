@@ -386,6 +386,10 @@ async def delete_saved_anime(
 async def get_all_animes_cache(
     response: Response,
     request: Request,
+    sort_by: str = None,
+    desc: bool = None,
+    page: int = 0,
+    size: int = 10,
     current_user: dict = Depends(get_current_user),
 ):
     start_time = time.time()
@@ -399,7 +403,9 @@ async def get_all_animes_cache(
                 func="change_user_status",
                 message="Unauthorized",
             )
-        cache = await get_all_animes_cache_controller()
+        cache = await get_all_animes_cache_controller(
+            sort_by, desc, page, size
+        )
         process_time = time.time() - start_time
         logger.info(f"Got all animes cache in {process_time:.2f} seconds")
         return AnimeCacheListOut(

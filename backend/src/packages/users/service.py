@@ -10,10 +10,36 @@ from ..auth.utils import (
 from .utils import cast_single_user, cast_user_token, cast_users_list
 
 
-def get_all_users_controller():
+def get_all_users_controller(sort_by: str, desc: bool, page: str, size: str):
     with DatabaseSession() as db:
-        users = db.query(User).order_by(User.username).all()
-        return cast_users_list(users)
+        order_by_clause = None
+        if sort_by is not None:
+            order_by_column = getattr(User, sort_by)
+            order_by_clause = (
+                order_by_column.desc() if desc else order_by_column.asc()
+            )
+
+        page = int(page)
+        size = int(size)
+        if size == -1:
+            offset = None
+            limit = None
+        else:
+            offset = page * size
+            limit = size
+
+        query = db.query(User)
+        if order_by_clause is not None:
+            query = query.order_by(order_by_clause)
+        if offset is not None:
+            query = query.offset(offset)
+        total = query.count()
+        if limit is not None:
+            query = query.limit(limit)
+
+        users = query.all()
+
+        return cast_users_list(users, total)
 
 
 def get_user_controller(user_id: str):

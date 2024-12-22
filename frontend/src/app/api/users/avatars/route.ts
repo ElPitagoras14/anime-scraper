@@ -10,7 +10,7 @@ export async function GET() {
       .filter((file) => file.endsWith(".png"))
       .map((file) => `${file}`);
 
-    return Response.json(images); // Devuelve una respuesta JSON con la lista de imágenes
+    return Response.json(images);
   } catch (error) {
     console.error("Error reading images directory:", error);
     return new Response(

@@ -11,11 +11,10 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import FieldLabel from "@/components/FieldLabel";
+import FieldLabel from "@/components/field-label";
 import Link from "next/link";
 import axios from "axios";
 import { useToast } from "@/components/ui/use-toast";
-import { signOut } from "next-auth/react";
 import { Icons } from "@/components/ui/icons";
 import { useState } from "react";
 

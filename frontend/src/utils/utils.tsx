@@ -16,3 +16,8 @@ export const useIsMobile = () => {
 
   return isMobile;
 };
+
+export const camelToSnake = (str: string | undefined) => {
+  if (!str) return undefined;
+  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+};

@@ -11,7 +11,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import FieldLabel from "@/components/FieldLabel";
+import FieldLabel from "@/components/field-label";
 import Link from "next/link";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
@@ -80,22 +80,29 @@ export default function Register() {
 
   const handleLogin = async (data: z.infer<typeof validationSchema>) => {
     setIsLoadingLogin(true);
-    const response = await signIn("credentials", {
-      username: data.username,
-      password: data.password,
-      redirect: false,
-    });
-
-    if (response?.ok) {
-      router.push("/scraper");
-    } else {
-      const { error } = response || {};
-      toast({
-        title: "Error logging in",
-        description: error,
+    try {
+      const response = await signIn("credentials", {
+        username: data.username,
+        password: data.password,
+        redirect: false,
       });
-    }
 
+      if (response && !response.error) {
+        router.push("/scraper");
+      } else {
+        toast({
+          title: "Error logging in",
+          description: "Please try again later",
+        });
+      }
+    } catch (error: any) {
+      if (!error.response) {
+        toast({
+          title: "Error logging in",
+          description: "Please try again later",
+        });
+      }
+    }
     setIsLoadingLogin(false);
   };
 
