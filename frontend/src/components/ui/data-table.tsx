@@ -62,7 +62,6 @@ export function DataTable<TData, TValue>({
   });
 
   useEffect(() => {
-    console.log("sorting", sorting);
     if (serverSide) {
       serverSide.setServerSort(sorting);
       serverSide.setServerPage(pagination);

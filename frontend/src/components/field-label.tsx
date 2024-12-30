@@ -3,9 +3,9 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 
 interface FieldLabelProps {
@@ -26,7 +26,7 @@ export default function FieldLabel({
       name={name}
       render={({ field }) => (
         <FormItem className={className}>
-          <Label className="text-muted-foreground">{label}</Label>
+          <FormLabel className="text-muted-foreground">{label}</FormLabel>
           <FormControl>
             <Input
               {...field}
