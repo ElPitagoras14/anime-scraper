@@ -94,6 +94,7 @@ async def get_anime_info_controller(anime: str, current_user: dict):
             .where(user_save_anime.c.user_id == current_user["sub"])
         ).scalar()
 
+        anime_week_day = None
         if anime_info:
             anime_is_finished = anime_info.is_finished
             anime_week_day = anime_info.week_day
@@ -107,8 +108,11 @@ async def get_anime_info_controller(anime: str, current_user: dict):
             if (
                 anime_is_finished
                 or not anime_week_day
-                or anime_week_day != today_weekday
-                or anime_last_peek >= last_weekday
+                or (
+                    anime_week_day != today_weekday
+                    and anime_last_peek.replace(tzinfo=timezone.utc)
+                    >= last_weekday
+                )
             ):
                 logger.info(f"Found anime {anime} in cache database")
                 anime_response = cast_anime_info(
@@ -145,7 +149,7 @@ async def get_anime_info_controller(anime: str, current_user: dict):
                     cover_data = await response.read()
                     b64_image = base64.b64encode(cover_data).decode("utf-8")
 
-                week_day = None
+                new_week_day = None
                 anime_response = None
                 new_anime = None
                 if anime_info:
@@ -158,7 +162,7 @@ async def get_anime_info_controller(anime: str, current_user: dict):
                         b64_image,
                         is_finished,
                         description,
-                        week_day,
+                        anime_week_day,
                         is_saved,
                     )
                     logger.info(f"Updated anime {anime} in cache database")
@@ -168,14 +172,14 @@ async def get_anime_info_controller(anime: str, current_user: dict):
 
                 else:
                     if not is_finished:
-                        week_day = await get_emission_date(anime)
+                        new_week_day = await get_emission_date(anime)
                     new_anime = Anime(
                         id=anime,
                         name=name,
                         description=parsed_description,
                         img=b64_image,
                         is_finished=is_finished,
-                        week_day=week_day,
+                        week_day=new_week_day,
                         last_peek=datetime.now(timezone.utc),
                     )
                     db.add(new_anime)
@@ -188,7 +192,7 @@ async def get_anime_info_controller(anime: str, current_user: dict):
                         b64_image,
                         is_finished,
                         parsed_description,
-                        week_day,
+                        new_week_day,
                         is_saved,
                     )
                     logger.info(f"Found anime {anime} in animeflv")
