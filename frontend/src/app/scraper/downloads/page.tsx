@@ -1,6 +1,5 @@
 "use client";
 
-import { DownloadCard } from "@/app/scraper/downloads/components/donwload-card";
 import {
   Accordion,
   AccordionContent,
@@ -26,6 +25,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { DownloadCard } from "./components/donwload-card";
 
 export default function Downloads() {
   const { queue, downloading, maxConcurrentDownloads } = useAppSelector(
