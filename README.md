@@ -18,6 +18,8 @@ Together, these components create a seamless solution for anime enthusiasts, sim
   - Python 3.7+
   - pip
   - PostgreSQL
+  - Redis
+  - Celery
 - **Frontend**:
   - Node.js 14+
   - npm or yarn
@@ -26,7 +28,8 @@ Together, these components create a seamless solution for anime enthusiasts, sim
 
 > [!IMPORTANT]
 > Rename `.env.example` to `.env` and fill it.
-> Ensure that you fill environment variables on `.env` file at the root of the project.
+> Rename `docker-compose.yaml.example` to `docker-compose.yaml` and fill it.
+> Ensure that you fill environment variables on `.env` and `docker-compose.yaml` files at the root of the project.
 
 ### Docker Use
 
@@ -49,12 +52,12 @@ Together, these components create a seamless solution for anime enthusiasts, sim
 ### Development Use
 
 > [!IMPORTANT]
-> You need a running `postgres` database for your backend.
+> You need a running `postgres` database and `redis` database for your backend.
 
 Follow the specifir instruction for each project `Backend` and `Frontend` in their respective `README` files.
 
 > [!TIP]
-> If you are using `VSCode` you can use the `Setup Dev Env`, `Run Backend` and `Run Frontend` tasks.
+> If you are using `VSCode` you can use the `Setup Dev Env`, `Run Backend`, `Run Frontend` and `Add Workers` tasks .
 
 ## Author
 

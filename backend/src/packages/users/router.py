@@ -1,5 +1,4 @@
 import time
-from typing import Union
 
 from fastapi import APIRouter, Depends, Request, Response
 from loguru import logger
@@ -23,14 +22,17 @@ from .service import (
     update_user_info_controller,
 )
 from .responses import UserListOut, UserOut, UserTokenOut
-from .schemas import NewUser, UpdateUser
+from .schemas import NewUser, UpdateStatus, UpdateUser
 
 users_router = APIRouter()
 
 
 @users_router.get(
     "",
-    response_model=Union[UserListOut, InternalServerErrorResponse],
+    responses={
+        200: {"model": UserListOut},
+        500: {"model": InternalServerErrorResponse},
+    },
 )
 async def get_all_users(
     request: Request,
@@ -52,7 +54,9 @@ async def get_all_users(
                 func="change_user_status",
                 message="Unauthorized",
             )
-        users = get_all_users_controller(sort_by, desc, page, size)
+        users = get_all_users_controller(
+            sort_by, desc, page, size, current_user["sub"]
+        )
         process_time = time.time() - start_time
         logger.info(f"Got users in {process_time:.2f} seconds")
         return UserListOut(
@@ -72,11 +76,18 @@ async def get_all_users(
 
 @users_router.get(
     "/info/{user_id}",
-    response_model=Union[
-        UserOut, InternalServerErrorResponse, NotFoundResponse
-    ],
+    responses={
+        200: {"model": UserOut},
+        404: {"model": NotFoundResponse},
+        500: {"model": InternalServerErrorResponse},
+    },
 )
-async def get_user(request: Request, response: Response, user_id: str):
+async def get_user(
+    request: Request,
+    response: Response,
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+):
     start_time = time.time()
     request_id = request.state.request_id
     try:
@@ -109,7 +120,10 @@ async def get_user(request: Request, response: Response, user_id: str):
 
 @users_router.get(
     "/me",
-    response_model=Union[UserOut, InternalServerErrorResponse],
+    responses={
+        200: {"model": UserOut},
+        500: {"model": InternalServerErrorResponse},
+    },
 )
 async def get_current_user_info(
     request: Request,
@@ -140,11 +154,18 @@ async def get_current_user_info(
 
 @users_router.post(
     "",
-    response_model=Union[
-        UserOut, InternalServerErrorResponse, ConflictResponse
-    ],
+    responses={
+        200: {"model": UserOut},
+        409: {"model": ConflictResponse},
+        500: {"model": InternalServerErrorResponse},
+    },
 )
-async def create_user(new_user: NewUser, request: Request, response: Response):
+async def create_user(
+    new_user: NewUser,
+    request: Request,
+    response: Response,
+    current_user: dict = Depends(get_current_user),
+):
     start_time = time.time()
     request_id = request.state.request_id
     try:
@@ -177,11 +198,11 @@ async def create_user(new_user: NewUser, request: Request, response: Response):
 
 @users_router.put(
     "/info/{user_id}",
-    response_model=Union[
-        UserTokenOut,
-        InternalServerErrorResponse,
-        ConflictResponse,
-    ],
+    responses={
+        200: {"model": UserTokenOut},
+        409: {"model": ConflictResponse},
+        500: {"model": InternalServerErrorResponse},
+    },
 )
 async def update_user_info(
     request: Request,
@@ -233,9 +254,11 @@ async def update_user_info(
 
 @users_router.put(
     "/avatar",
-    response_model=Union[
-        UserOut, InternalServerErrorResponse, NotFoundResponse
-    ],
+    responses={
+        200: {"model": UserOut},
+        404: {"model": NotFoundResponse},
+        500: {"model": InternalServerErrorResponse},
+    },
 )
 async def change_user_avatar(
     request: Request,
@@ -279,19 +302,18 @@ async def change_user_avatar(
 
 @users_router.put(
     "/status/{user_id}",
-    response_model=Union[
-        UserOut,
-        InternalServerErrorResponse,
-        NotFoundResponse,
-        ConflictResponse,
-    ],
+    responses={
+        200: {"model": UserOut},
+        404: {"model": NotFoundResponse},
+        409: {"model": ConflictResponse},
+        500: {"model": InternalServerErrorResponse},
+    },
 )
 async def change_user_status(
     request: Request,
     response: Response,
     user_id: str,
-    is_active: bool = None,
-    is_admin: bool = None,
+    user_status: UpdateStatus,
     current_user: dict = Depends(get_current_user),
 ):
     start_time = time.time()
@@ -316,7 +338,7 @@ async def change_user_status(
             )
 
         user = change_user_status_controller(
-            user_id, is_active=is_active, is_admin=is_admin
+            user_id, user_status.is_active, user_status.is_admin
         )
         process_time = time.time() - start_time
         if not user:
@@ -347,9 +369,11 @@ async def change_user_status(
 
 @users_router.delete(
     "/{user_id}",
-    response_model=Union[
-        UserOut, InternalServerErrorResponse, NotFoundResponse
-    ],
+    responses={
+        200: {"model": SuccessResponse},
+        404: {"model": NotFoundResponse},
+        500: {"model": InternalServerErrorResponse},
+    },
 )
 async def delete_user(
     request: Request,

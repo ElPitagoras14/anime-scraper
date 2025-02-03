@@ -4,3 +4,4 @@ from .client import (
     get_range_episodes_download_links,
     get_emission_date,
 )
+from .utils import parse_episode_range

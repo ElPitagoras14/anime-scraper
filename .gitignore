@@ -5,6 +5,7 @@ __pycache__/
 *$py.class
 
 .env
+docker-compose.yaml
 
 # C extensions
 *.so
