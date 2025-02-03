@@ -21,7 +21,7 @@ def configure_logs():
 
     logger.add(
         sys.stdout,
-        level="INFO",
+        level="DEBUG",
         format=logger_format,
     )
 

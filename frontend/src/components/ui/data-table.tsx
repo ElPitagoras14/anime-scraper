@@ -4,12 +4,13 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
-  useReactTable,
   SortingState,
   getSortedRowModel,
-  getFilteredRowModel,
   PaginationState,
   getPaginationRowModel,
+  ColumnFiltersState,
+  getFilteredRowModel,
+  useReactTable,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -20,15 +21,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useEffect, useState } from "react";
-import { DataTablePagination } from "./data-pagination";
+import { Skeleton } from "./skeleton";
+import { DataTablePagination } from "./data-table-pagination";
+
+export type CustomColumnDef<T> = ColumnDef<T> & {
+  accessorKey?: string;
+  label?: string;
+};
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   serverSide?: {
+    setServerSorting: (sorting: SortingState) => void;
+    setServerPagination: (pagination: PaginationState) => void;
+    setServerColumnFilters?: (columnFilters: ColumnFiltersState) => void;
     totalRows: number;
-    setServerSort: (sort: SortingState) => void;
-    setServerPage: (page: PaginationState) => void;
+    isLoading: boolean;
   };
 }
 
@@ -42,35 +51,41 @@ export function DataTable<TData, TValue>({
     pageIndex: 0,
     pageSize: 10,
   });
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const isLoading = serverSide?.isLoading || false;
 
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onPaginationChange: setPagination,
+    getPaginationRowModel: getPaginationRowModel(),
     manualPagination: serverSide ? true : false,
-    rowCount: serverSide ? serverSide.totalRows : data.length,
     getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
     manualSorting: serverSide ? true : false,
+    onSortingChange: setSorting,
     getFilteredRowModel: getFilteredRowModel(),
+    onColumnFiltersChange: setColumnFilters,
+    manualFiltering: serverSide ? true : false,
+    rowCount: serverSide ? serverSide.totalRows : data.length,
     state: {
       sorting,
       pagination,
+      columnFilters,
     },
   });
 
   useEffect(() => {
     if (serverSide) {
-      serverSide.setServerSort(sorting);
-      serverSide.setServerPage(pagination);
+      serverSide.setServerSorting(sorting);
+      serverSide.setServerPagination(pagination);
+      serverSide.setServerColumnFilters?.(columnFilters);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sorting, pagination]);
+  }, [sorting, pagination, columnFilters]);
 
   return (
-    <div className="flex flex-col space-y-2 py-2">
+    <div className="space-y-3">
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -78,7 +93,7 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} className="m-0 p-0">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -92,7 +107,16 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  <Skeleton className="w-full h-full"></Skeleton>
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
@@ -114,7 +138,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  No data available
                 </TableCell>
               </TableRow>
             )}

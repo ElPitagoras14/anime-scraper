@@ -10,11 +10,12 @@ Anime Scraper API is a project built with FastAPI to scrape anime data and downl
 - pip
 - Docker (Only for Docker use)
 - Postgres Database
+- Redis Database
 
 ## Getting Started
 
 > [!IMPORTANT]
-> Ensure that you fill environment variables for the backend and postgres on `.env` file at the root of the project.
+> Ensure that you fill environment variables for backend utilities on `.env` and `docker-compose.yaml` files at the root of the project.
 
 ### Docker Use
 
@@ -24,7 +25,7 @@ Anime Scraper API is a project built with FastAPI to scrape anime data and downl
    docker-compose up -d api
    ```
 
-The server should be running at `http://localhost:8000`.
+The server should be running at `http://localhost:4002`.
 
 ### Development Use
 
@@ -50,10 +51,16 @@ The server should be running at `http://localhost:8000`.
    python main.py
    ```
 
-> [!TIP]
-> If you are using `VSCode` you can use the `Run Backend` task.
+5. Navigate to the `backend/src` folder and run the command:
 
-The server should be running at `http://localhost:8000`.
+   ```bash
+   celery -A queues.client worker --loglevel=INFO -E
+   ```
+
+> [!TIP]
+> If you are using `VSCode` you can use the `Run Backend` and `Add Workers` tasks.
+
+The server should be running at `http://localhost:4002`.
 
 ### Postgres (For Development)
 
@@ -63,6 +70,15 @@ The server should be running at `http://localhost:8000`.
    docker-compose up -d db
    ```
 
+
+### Redis (For Development)
+
+1. Create a Postgres Database with the following command at the root of the project:
+
+   ```bash
+   docker-compose up -d redis
+   ```
+
 ## Usage
 
-You can access the automatically generated FastAPI documentation at `http://localhost:8000/docs`.
+You can access the automatically generated FastAPI documentation at `http://localhost:4002/docs`.

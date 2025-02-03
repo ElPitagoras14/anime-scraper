@@ -1,16 +1,23 @@
 from datetime import datetime, timezone
+from loguru import logger
+
 from databases.postgres import DatabaseSession, User
 
-from ..auth.utils import (
+from packages.auth import (
     create_access_token,
     get_password_hash,
     verify_password,
 )
-
 from .utils import cast_single_user, cast_user_token, cast_users_list
 
 
-def get_all_users_controller(sort_by: str, desc: bool, page: str, size: str):
+def get_all_users_controller(
+    sort_by: str, desc: bool, page: str, size: str, user_id: str
+):
+    logger.debug(
+        f"Getting all users with sort_by: {sort_by}, "
+        + f"desc: {desc}, page: {page}, size: {size}"
+    )
     with DatabaseSession() as db:
         order_by_clause = None
         if sort_by is not None:
@@ -18,6 +25,8 @@ def get_all_users_controller(sort_by: str, desc: bool, page: str, size: str):
             order_by_clause = (
                 order_by_column.desc() if desc else order_by_column.asc()
             )
+
+        prioritized_order = (User.id == user_id).desc()
 
         page = int(page)
         size = int(size)
@@ -30,7 +39,9 @@ def get_all_users_controller(sort_by: str, desc: bool, page: str, size: str):
 
         query = db.query(User)
         if order_by_clause is not None:
-            query = query.order_by(order_by_clause)
+            query = query.order_by(prioritized_order, order_by_clause)
+        else:
+            query = query.order_by(prioritized_order)
         if offset is not None:
             query = query.offset(offset)
         total = query.count()
@@ -43,6 +54,7 @@ def get_all_users_controller(sort_by: str, desc: bool, page: str, size: str):
 
 
 def get_user_controller(user_id: str):
+    logger.debug(f"Getting user with id: {user_id}")
     with DatabaseSession() as db:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
@@ -51,6 +63,7 @@ def get_user_controller(user_id: str):
 
 
 def create_user_controller(user: dict):
+    logger.debug(f"Creating user with username: {user.username}")
     with DatabaseSession() as db:
         user_exists = (
             db.query(User).filter(User.username == user.username).first()
@@ -70,6 +83,7 @@ def create_user_controller(user: dict):
 
 
 def update_user_info_controller(user_id: str, user: dict):
+    logger.debug(f"Updating user with id: {user_id}")
     with DatabaseSession() as db:
         user_db = db.query(User).filter(User.id == user_id).first()
         if not user_db:
@@ -96,6 +110,7 @@ def update_user_info_controller(user_id: str, user: dict):
 
 
 def change_user_avatar_controller(user_id: str, avatar: str):
+    logger.debug(f"Changing avatar for user with id: {user_id}")
     with DatabaseSession() as db:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
@@ -110,11 +125,11 @@ def change_user_avatar_controller(user_id: str, avatar: str):
 def change_user_status_controller(
     user_id: str, is_active: bool = None, is_admin: bool = None
 ):
+    logger.debug(f"Changing status for user with id: {user_id}")
     with DatabaseSession() as db:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             return False, "User not found"
-        print(is_active, is_admin)
         if is_active is not None:
             user.is_active = is_active
         if is_admin is not None:
@@ -126,6 +141,7 @@ def change_user_status_controller(
 
 
 def delete_user_controller(user_id: str):
+    logger.debug(f"Deleting user with id: {user_id}")
     with DatabaseSession() as db:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:

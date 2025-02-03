@@ -17,6 +17,21 @@
       "problemMatcher": []
     },
     {
+      "label": "Add workers",
+      "type": "shell",
+      "windows": {
+        "command": "${workspaceFolder}/scripts/add-workers.bat"
+      },
+      "linux": {
+        "command": "${workspaceFolder}/scripts/setup-dev.sh"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Run Backend",
       "type": "shell",
       "command": "python",
@@ -27,19 +42,17 @@
     },
     {
       "label": "Run Frontend",
-      "type": "shell",
-      "windows": {
-        "command": "${workspaceFolder}/scripts/run-frontend.bat"
-      },
-      "linux": {
-        "command": "${workspaceFolder}/scripts/run-frontend.sh"
+      "type": "npm",
+      "script": "dev",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
       }
     },
     {
       "label": "Deploy with docker-compose",
       "type": "shell",
       "command": "docker-compose",
-      "args": ["up", "-d", "--build"],
-    }
+      "args": ["up", "-d", "--build"]
+    },
   ]
 }

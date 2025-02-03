@@ -19,7 +19,7 @@ export default function AnimeCard({
   return (
     <div className="flex flex-col mb-4 items-center">
       <div className="relative hover:cursor-pointer min-w-[120px] w-[20vw] lg:w-[20vw] lg:max-w-[180px] min-h-[200px] h-[30vw] lg:h-[30vw] lg:max-h-[250px] flex justify-center">
-        <Link href={`/scraper/info/${animeId}`}>
+        <Link href={`/info/${animeId}`}>
           <Image
             src={image}
             alt=""

@@ -7,32 +7,49 @@ from sqlalchemy import (
     String,
     Boolean,
     DateTime,
-    Table,
     Integer,
     Text,
     UUID,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, Mapped
+from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
-user_save_anime = Table(
-    "user_save_anime",
-    Base.metadata,
-    Column(
-        "user_id",
+
+class UserSaveAnime(Base):
+    __tablename__ = "user_save_anime"
+
+    user_id = Column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE", onupdate="CASCADE"),
         primary_key=True,
-    ),
-    Column(
-        "anime_id",
+    )
+    anime_id = Column(
         String,
         ForeignKey("animes.id", ondelete="CASCADE", onupdate="CASCADE"),
         primary_key=True,
-    ),
-)
+    )
+
+
+class UserDownloadEpisode(Base):
+    __tablename__ = "user_download_episode"
+
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE", onupdate="CASCADE"),
+        primary_key=True,
+    )
+    episode_id = Column(
+        Integer,
+        ForeignKey("episodes.id", ondelete="CASCADE", onupdate="CASCADE"),
+        primary_key=True,
+    )
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
 
 
 class User(Base):
@@ -56,8 +73,11 @@ class User(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    animes_saved: Mapped[list["Anime"]] = relationship(
-        secondary=user_save_anime, back_populates="users_saving"
+    animes_saved = relationship(
+        "UserSaveAnime", backref="user", cascade="all, delete"
+    )
+    episodes_downloading = relationship(
+        "UserDownloadEpisode", backref="user", cascade="all, delete"
     )
 
 
@@ -76,11 +96,11 @@ class Anime(Base):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    users_saving: Mapped[list["User"]] = relationship(
-        secondary=user_save_anime, back_populates="animes_saved"
+    users_saving = relationship(
+        "UserSaveAnime", backref="anime", cascade="all, delete"
     )
-    all_episodes: Mapped[list["Episode"]] = relationship(
-        back_populates="anime", cascade="all, delete"
+    all_episodes = relationship(
+        "Episode", back_populates="anime", cascade="all, delete"
     )
 
 
@@ -96,5 +116,11 @@ class Episode(Base):
     episode_id = Column(Integer, nullable=False)
     name = Column(String(255), nullable=False)
     link = Column(String(255), nullable=False)
+    job_id = Column(String(255), nullable=True)
+    file_path = Column(String(255), nullable=True)
+    size = Column(Integer, nullable=True)
 
-    anime: Mapped["Anime"] = relationship(back_populates="all_episodes")
+    anime = relationship("Anime", back_populates="all_episodes")
+    users_downloading = relationship(
+        "UserDownloadEpisode", backref="episode", cascade="all, delete"
+    )

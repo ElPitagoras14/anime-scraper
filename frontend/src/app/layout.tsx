@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/providers/theme-provider";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { ReduxProvider } from "@/redux/ReduxProvider";
 import { SessionProvider } from "next-auth/react";
 
 const fontSans = FontSans({
@@ -38,7 +37,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <SessionProvider>
-            <ReduxProvider>{children}</ReduxProvider>
+            {children}
           </SessionProvider>
           <Toaster></Toaster>
         </ThemeProvider>

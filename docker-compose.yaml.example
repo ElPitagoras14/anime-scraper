@@ -1,0 +1,94 @@
+version: "3"
+services:
+  web-local:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_BACKEND_URL=http://192.168.1.100:4002
+        - NEXT_PUBLIC_SERVER_BACKEND_URL=http://api:8000
+        - NEXTAUTH_URL=http://192.168.1.100:4000
+        - AUTH_SECRET=${AUTH_SECRET}
+        - PORT=3000
+    ports:
+      - "4000:3000"
+    environment:
+      - NODE_ENV=production
+    container_name: web-local
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "4002:8000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - APP_NAME=main:app
+      - APP_ADMIN_USER=${APP_ADMIN_USER}
+      - APP_ADMIN_PASS=${APP_ADMIN_PASS}
+      - AUTH_SECRET_KEY=${AUTH_SECRET_KEY}
+      - AUTH_ALGORITHM=${AUTH_ALGORITHM}
+      - AUTH_EXPIRE_MINUTES=${AUTH_EXPIRE_MINUTES}
+      - LOG_APP_PATH=/var/log/scraper-anime/app.log
+      - LOG_ERROR_PATH=/var/log/scraper-anime/error.log
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASS=${POSTGRES_PASS}
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_QUEUE_NAME=download-queue
+      - ANIME_FOLDER=/var/animes
+    volumes:
+      - ${DOCKER_DATA}/api-logs:/var/log/scraper-anime
+      - ${DOCKER_DATA}/animes:/var/animes
+    depends_on:
+      - db
+      - redis
+    container_name: api
+    restart: unless-stopped
+
+  db:
+    image: postgres:17.0
+    ports:
+      - "4003:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASS}
+      - POSTGRES_DB=${POSTGRES_DATABASE}
+    volumes:
+      - ${DOCKER_DATA}/postgres-data:/var/lib/postgresql/data
+      - ./backend/src/databases/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    container_name: db
+    restart: unless-stopped
+
+  redis:
+    image: redis:6.2
+    container_name: redis
+    restart: unless-stopped
+
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.celery
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASS=${POSTGRES_PASS}
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_QUEUE_NAME=download-queue
+      - ANIME_FOLDER=/var/animes
+    volumes:
+      - ${DOCKER_DATA}/animes:/var/animes
+    depends_on:
+      - db
+      - redis
+    container_name: celery-worker
+    restart: unless-stopped

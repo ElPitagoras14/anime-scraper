@@ -1,5 +1,4 @@
 import time
-from typing import Union
 from fastapi import APIRouter, Request, Response
 from loguru import logger
 
@@ -21,15 +20,17 @@ EXPIRE_MINUTES = auth_settings.EXPIRE_MINUTES
 
 @auth_router.post(
     "/login",
-    response_model=Union[
-        TokenOut, InternalServerErrorResponse, ConflictResponse
-    ],
+    responses={
+        200: {"model": TokenOut},
+        409: {"model": ConflictResponse},
+        500: {"model": InternalServerErrorResponse},
+    },
 )
 async def login(request: Request, response: Response, login_input: AuthInfo):
     start_time = time.time()
     request_id = request.state.request_id
     try:
-        logger.info("Logging in")
+        logger.info(f"Logging in {login_input.username}")
         success, value = login_controller(
             login_input.username, login_input.password
         )
@@ -61,14 +62,21 @@ async def login(request: Request, response: Response, login_input: AuthInfo):
         )
 
 
-@auth_router.post("/register")
+@auth_router.post(
+    "/register",
+    responses={
+        200: {"model": SuccessResponse},
+        409: {"model": ConflictResponse},
+        500: {"model": InternalServerErrorResponse},
+    },
+)
 async def register(
     register_info: AuthInfo, request: Request, response: Response
 ):
     start_time = time.time()
     request_id = request.state.request_id
     try:
-        logger.info("Registering")
+        logger.info(f"Registering {register_info.username}")
         success, value = register_controller(
             register_info.username,
             register_info.password,

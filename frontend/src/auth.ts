@@ -3,7 +3,7 @@ import { jwtDecode, JwtPayload } from "jwt-decode";
 import Credentials from "next-auth/providers/credentials";
 import axios from "axios";
 
-interface CustomJWTPayload extends JwtPayload {
+export interface CustomJWTPayload extends JwtPayload {
   sub: string;
   username: string;
   is_admin: boolean;
@@ -73,7 +73,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           };
           return user;
         } catch (error: any) {
-          throw new Error("Something went wrong, please try again later");
+          const {
+            response: {
+              data: { message, statusCode },
+            },
+          } = error;
+          if (statusCode === 409) {
+            return null;
+          }
+          return message;
         }
       },
     }),
@@ -82,7 +90,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     maxAge: MAX_AGE * 60,
   },
   callbacks: {
-    jwt({ token, user, session }) {
+    jwt: async ({ token, user, session }) => {
       if (user) {
         token.user = user;
       }
@@ -91,7 +99,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return token;
     },
-    session({ session, token }) {
+    session: async ({ session, token }) => {
       if (token) {
         session.user = token.user as any;
       }

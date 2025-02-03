@@ -1,3 +1,18 @@
+export interface QueryParams {
+  sorting?: {
+    id: string;
+    desc: boolean;
+  }[];
+  pagination?: {
+    pageIndex?: number;
+    pageSize?: number;
+  };
+  filter?: {
+    id: string;
+    value: unknown;
+  }[];
+}
+
 export interface Download {
   id: string;
   isReady: boolean;
@@ -28,15 +43,4 @@ export interface Anime {
   image: string;
   isSaved: boolean;
   weekDay: string;
-}
-
-export interface QueryParams {
-  sorting?: {
-    id?: string;
-    desc?: boolean;
-  }[];
-  pagination?: {
-    pageIndex?: number;
-    pageSize?: number;
-  };
 }

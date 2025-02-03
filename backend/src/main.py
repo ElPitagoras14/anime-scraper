@@ -14,6 +14,7 @@ from watchgod import run_process
 
 from packages.auth import get_password_hash
 
+
 HOST = general_settings.API_HOST
 PORT = general_settings.API_PORT
 APP_NAME = general_settings.APP_NAME
@@ -68,18 +69,21 @@ app.add_middleware(
 async def add_logging_context(request: Request, call_next):
     request_id = str(uuid.uuid4())
     request.state.request_id = request_id
-    user = None
+    user_id = None
+    username = None
     token = request.headers.get("Authorization")
     if token:
         token = token.split(" ")[-1]
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            user = payload.get("sub")
+            user_id = payload.get("sub")
+            username = payload.get("username")
         except JWTError:
-            user = None
-    if user:
-        user = user
-    with logger.contextualize(request_id=request_id, user=user):
+            user_id = None
+            username = None
+    with logger.contextualize(
+        request_id=request_id, user_id=user_id, username=username
+    ):
         response = await call_next(request)
 
     return response

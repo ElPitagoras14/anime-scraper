@@ -2,8 +2,6 @@
 
 import { TableCell, TableRow } from "./ui/table";
 import { Download, Play } from "lucide-react";
-import { useAppDispatch } from "@/redux/hooks";
-import { addToQueue } from "@/redux/features/downloadSlice";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
 import { useState } from "react";
@@ -18,92 +16,70 @@ import { Icons } from "./ui/icons";
 import { signOut, useSession } from "next-auth/react";
 
 interface EpisodeInfoProps {
-  anime: string;
+  id: number;
   streamingLink: string;
   episodeId: number;
   name: string;
-  image: string;
 }
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
+const downloadSingleEpisode = async (
+  token: string,
+  id: number,
+  streamingLink: string
+) => {
+  const downloadOptions = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    url: `${BACKEND_URL}/api/v2/animes/downloadlinks/single`,
+    params: {
+      id,
+      episode_link: streamingLink,
+    },
+  };
+
+  const response = await axios(downloadOptions);
+  const {
+    data: { statusCode },
+  } = response;
+  return statusCode;
+};
+
 export const EpisodeInfo = ({
-  anime,
+  id,
   streamingLink,
   episodeId,
   name,
-  image,
 }: EpisodeInfoProps) => {
   const { data } = useSession();
   const { user: { token = "" } = {} } = data || {};
-  const dispatch = useAppDispatch();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const startDownload = (downloadInfo: { link: string; service: string }) => {
-    const { link, service } = downloadInfo;
-    dispatch(
-      addToQueue({
-        id: uuidv4(),
-        isReady: false,
-        link,
-        service,
-        fileName: `${anime} - Episode ${episodeId}.mp4`,
-        date: new Date().toISOString(),
-        anime,
-        episodeId,
-        name,
-        image,
-        progress: 0,
-      })
-    );
-  };
-
   const getDownloadLink = async () => {
-    setIsLoading(true);
     try {
-      const downloadOptions = {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        url: `${BACKEND_URL}/api/v2/animes/downloadlinks/single`,
-        params: {
-          episode_id: episodeId,
-          episode_link: streamingLink,
-        },
-      };
+      setIsLoading(true);
 
-      toast({
-        title: "Download request.",
-        description: `Episode ${episodeId}`,
-      });
+      const statusCode = await downloadSingleEpisode(token, id, streamingLink);
 
-      const response = await axios(downloadOptions);
-      const {
-        data: {
-          payload: { downloadInfo: { link = "", service = "" } = {} },
-        },
-      } = response;
-
-      if (!link) {
+      if (statusCode === 201) {
         toast({
-          title: "Error fetching download link",
-          description: `Episode ${episodeId}`,
+          title: `Download already in queue. Episode ${episodeId}`,
         });
         return;
       }
 
       toast({
-        title: `Adding to download queue.`,
-        description: `Episode ${episodeId}`,
+        title: `Adding to download queue. Episode ${episodeId}`,
       });
-
-      startDownload({ link, service });
     } catch (error: any) {
       if (!error.response) {
         toast({
+          variant: "destructive",
           title: "Error fetching download link",
           description: `Episode ${episodeId}`,
         });

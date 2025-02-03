@@ -14,7 +14,7 @@ Anime Scraper Frontend is a web application built with Next.js to display and ma
 ## Getting Started
 
 > [!IMPORTANT]
-> Ensure that you fill environment variables for the frontend on `.env` file at the root of the project.
+> Ensure that you fill environment variables for the frontend on `.env` and `docker-compose.yaml` files at the root of the project.
 
 ### Docker Use
 
@@ -43,4 +43,4 @@ Anime Scraper Frontend is a web application built with Next.js to display and ma
 > [!TIP]
 > If you are using `VSCode` you can use the `Run Frontend` task.
 
-The development server should be running at `http://localhost:3000`.
+The development server should be running at `http://localhost:4000`.

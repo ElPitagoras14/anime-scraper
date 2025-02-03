@@ -1,16 +1,21 @@
 from databases.postgres import Episode as EpisodeModel
+from utils.utils import convert_to_local
 
 from .responses import (
     Anime,
     AnimeCard,
     AnimeCardList,
-    AnimeDownloadLink,
-    AnimeDownloadLinkList,
     AnimeList,
     AnimeStreamingLinks,
-    Link,
     AnimeCache,
     AnimeCacheList,
+    DownloadJob,
+    DownloadJobList,
+    Episode,
+    DownloadJobInfo,
+    EpisodeDownloadInfo,
+    EpisodeDownloadList,
+    Statistics,
 )
 
 
@@ -73,7 +78,8 @@ def cast_anime_streaming_links(
     return AnimeStreamingLinks(
         name=anime_name,
         items=[
-            EpisodeModel(
+            Episode(
+                id=episode.id,
                 name=episode.name,
                 link=episode.link,
                 episode_id=episode.episode_id,
@@ -84,36 +90,18 @@ def cast_anime_streaming_links(
     )
 
 
-def cast_single_anime_download_link(
-    name: str, download_info: str, episode_id: int
-):
-    link = (
-        Link(
-            service=download_info["service"],
-            link=download_info["link"],
-        )
-        if download_info
-        else None
-    )
-    return AnimeDownloadLink(
-        name=name,
-        download_info=link,
-        episode_id=episode_id,
+def cast_download_job(item: list):
+    return DownloadJob(
+        anime=item[0],
+        episode=item[1],
+        job_id=item[2],
     )
 
 
-def cast_anime_download_links(download_links: dict):
-    return AnimeDownloadLinkList(
-        name=download_links["anime"],
-        items=[
-            cast_single_anime_download_link(
-                episode["name"],
-                episode["download_info"],
-                episode["episode"],
-            )
-            for episode in download_links["download_links"]
-        ],
-        total=len(download_links["download_links"]),
+def cast_download_job_list(jobs: list, total: int):
+    return DownloadJobList(
+        items=[cast_download_job(job) for job in jobs],
+        total=total,
     )
 
 
@@ -121,13 +109,53 @@ def cast_anime_size(anime: str, name: str, size: float):
     return AnimeCache(animeId=anime, name=name, size=size)
 
 
-def cast_anime_size_list(anime_info_list: list[dict], total: int):
+def cast_anime_size_list(
+    anime_info_list: list[dict], total: int, formated_total_size: str
+):
     return AnimeCacheList(
         items=[
             cast_anime_size(anime["anime_id"], anime["name"], anime["size"])
             for anime in anime_info_list
         ],
-        size=sum([anime["size"] for anime in anime_info_list]),
-        measured_in="KB",
+        size=formated_total_size,
+        measured_in="MB",
         total=total,
+    )
+
+
+def cast_to_download_job_info(item: list):
+    return DownloadJobInfo(
+        job_id=item[0],
+        status=item[1],
+        progress=item[2],
+        total=item[3],
+    )
+
+
+def cast_to_episode_download_info(item: list):
+    return EpisodeDownloadInfo(
+        episode_id=item[0],
+        image=item[1],
+        anime=item[2],
+        episode_name=item[3],
+        created_at=convert_to_local(item[4]),
+        status=item[5],
+        progress=item[6],
+        total=item[7],
+        filename=item[8],
+    )
+
+
+def cast_to_episode_download_list(items: list, total: int):
+    return EpisodeDownloadList(
+        items=[cast_to_episode_download_info(item) for item in items],
+        total=total,
+    )
+
+
+def cast_to_statistics(items: list):
+    return Statistics(
+        animes_saved=items[0],
+        episodes_to_download=items[1],
+        animes_in_emission=items[2],
     )
