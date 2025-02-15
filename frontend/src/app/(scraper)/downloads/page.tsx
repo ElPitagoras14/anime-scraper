@@ -199,11 +199,7 @@ export default function Downloads() {
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={async () => await handleReDownload(episodeId)}
-                disabled={
-                  status !== "PENDING" &&
-                  status !== "DOWNLOADED" &&
-                  status !== "DOWNLOADING"
-                }
+                disabled={status === "DOWNLOADING"}
               >
                 Force re download
               </DropdownMenuItem>
