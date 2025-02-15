@@ -1,20 +1,21 @@
 version: "3"
 services:
-  web-local:
+  web:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_BACKEND_URL=http://192.168.1.100:4002
+        - NEXT_PUBLIC_BACKEND_URL=http://localhost:4002
         - NEXT_PUBLIC_SERVER_BACKEND_URL=http://api:8000
-        - NEXTAUTH_URL=http://192.168.1.100:4000
+        - NEXTAUTH_URL=http://localhost:4000
         - AUTH_SECRET=${AUTH_SECRET}
+        - AUTH_EXPIRE_MINUTES=${AUTH_EXPIRE_MINUTES}
         - PORT=3000
     ports:
       - "4000:3000"
     environment:
       - NODE_ENV=production
-    container_name: web-local
+    container_name: web
     restart: unless-stopped
 
   api:
@@ -28,7 +29,7 @@ services:
       - API_PORT=8000
       - APP_NAME=main:app
       - APP_ADMIN_USER=${APP_ADMIN_USER}
-      - APP_ADMIN_PASS=${APP_ADMIN_PASS}
+      - APP_ADMIN_PASS=${APP_ADMIN_USER}
       - AUTH_SECRET_KEY=${AUTH_SECRET_KEY}
       - AUTH_ALGORITHM=${AUTH_ALGORITHM}
       - AUTH_EXPIRE_MINUTES=${AUTH_EXPIRE_MINUTES}

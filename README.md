@@ -8,7 +8,7 @@
 
 - [**Anime Scraper Frontend**:](/frontend/README.md) A web application developed with Next.js that allows users to interact with the scraped data, manage collections, and access download links in an intuitive interface.
 
-Together, these components create a seamless solution for anime enthusiasts, simplifying the discovery and management of anime-related resources while offering a customizable and scalable platform.
+Together, these components create a seamless solution for anime enthusiasts, simplifying the discovery and management of anime-related resources.
 
 ## Requirements
 
@@ -28,7 +28,7 @@ Together, these components create a seamless solution for anime enthusiasts, sim
 
 > [!IMPORTANT]
 > Rename `.env.example` to `.env` and fill it.
-> Rename `docker-compose.yaml.example` to `docker-compose.yaml` and fill it.
+> Rename `docker-compose.yaml.example` to `docker-compose.yaml` and change according your needs.
 > Ensure that you fill environment variables on `.env` and `docker-compose.yaml` files at the root of the project.
 
 ### Docker Use
@@ -58,6 +58,13 @@ Follow the specifir instruction for each project `Backend` and `Frontend` in the
 
 > [!TIP]
 > If you are using `VSCode` you can use the `Setup Dev Env`, `Run Backend`, `Run Frontend` and `Add Workers` tasks .
+
+## Ports Used
+|Service|Port Used|
+|-------|---------|
+|Web|`4000`|
+|Api|`4002`|
+|PostgresSQL|`4003`|
 
 ## Author
 

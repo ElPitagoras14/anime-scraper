@@ -247,16 +247,17 @@ export default function AccountTab() {
   }, [token]);
 
   const onSubmit = form.handleSubmit(
-    async (data: z.infer<typeof validationSchema>) => {
+    async (dataForm: z.infer<typeof validationSchema>) => {
       try {
         setIsLoading(true);
-        const newToken = await updateUserInfo(data, userId!, token);
-        const decodedToken = jwtDecode<CustomJWTPayload>(token);
+        const newToken = await updateUserInfo(dataForm, userId!, token);
+        const decodedToken = jwtDecode<CustomJWTPayload>(newToken);
         const { username } = decodedToken;
         await update({
           ...data,
           user: { ...data!.user, token: newToken, username },
         });
+        form.reset(dataForm);
         toast({
           title: "User updated",
           description: "The user was successfully updated",
