@@ -1,6 +1,6 @@
 from playwright.async_api import Page
 
-from .utils import TIMEOUT
+from libraries.anime_scraper.animeflv.config import TIMEOUT
 
 
 async def get_streamtape_download_link(page: Page, link: str):

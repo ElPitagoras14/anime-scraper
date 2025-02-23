@@ -65,6 +65,14 @@ Follow the specifir instruction for each project `Backend` and `Frontend` in the
 |Web|`4000`|
 |Api|`4002`|
 |PostgresSQL|`4003`|
+|Redis|`4004`|
+
+## Roadmap
+
+- [x] Get download link with web scraping
+- [x] Create a web platform to manage and download anime epiosdes
+- [x] Change to server side downloading
+- [ ] Upload anime scraper code as a library
 
 ## Author
 

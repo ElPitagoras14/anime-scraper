@@ -1,8 +1,6 @@
 from playwright.async_api import Page
 
-from .utils import TIMEOUT
-
-SW_DOWNLOAD_URL = "https://streamwish.to/f"
+from libraries.anime_scraper.animeflv.config import TIMEOUT, SW_DOWNLOAD_URL
 
 
 async def get_sw_link(page: Page, search_page: Page):

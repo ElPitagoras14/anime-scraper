@@ -677,7 +677,7 @@ async def delete_saved_anime(
     try:
         logger.info(f"Deleting saved anime with id: {anime_id}")
         status, value = await delete_saved_anime_controller(
-            anime_id, current_user
+            anime_id, current_user["sub"]
         )
         process_time = time.time() - start_time
         if not status:

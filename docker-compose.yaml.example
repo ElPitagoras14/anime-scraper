@@ -15,7 +15,7 @@ services:
       - "4000:3000"
     environment:
       - NODE_ENV=production
-    container_name: web
+    container_name: web-scraper
     restart: unless-stopped
 
   api:
@@ -35,7 +35,7 @@ services:
       - AUTH_EXPIRE_MINUTES=${AUTH_EXPIRE_MINUTES}
       - LOG_APP_PATH=/var/log/scraper-anime/app.log
       - LOG_ERROR_PATH=/var/log/scraper-anime/error.log
-      - POSTGRES_HOST=db
+      - POSTGRES_HOST=postgres
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASS=${POSTGRES_PASS}
       - POSTGRES_PORT=5432
@@ -48,12 +48,12 @@ services:
       - ${DOCKER_DATA}/api-logs:/var/log/scraper-anime
       - ${DOCKER_DATA}/animes:/var/animes
     depends_on:
-      - db
+      - postgres
       - redis
-    container_name: api
+    container_name: api-scraper
     restart: unless-stopped
 
-  db:
+  postgres:
     image: postgres:17.0
     ports:
       - "4003:5432"
@@ -64,12 +64,14 @@ services:
     volumes:
       - ${DOCKER_DATA}/postgres-data:/var/lib/postgresql/data
       - ./backend/src/databases/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-    container_name: db
+    container_name: postgres-scraper
     restart: unless-stopped
 
   redis:
     image: redis:6.2
-    container_name: redis
+    ports:
+      - "4004:6379"
+    container_name: redis-scraper
     restart: unless-stopped
 
   celery-worker:
@@ -77,7 +79,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.celery
     environment:
-      - POSTGRES_HOST=db
+      - POSTGRES_HOST=postgres
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASS=${POSTGRES_PASS}
       - POSTGRES_PORT=5432
@@ -89,7 +91,7 @@ services:
     volumes:
       - ${DOCKER_DATA}/animes:/var/animes
     depends_on:
-      - db
+      - postgres
       - redis
-    container_name: celery-worker
+    container_name: celery-worker-scraper
     restart: unless-stopped

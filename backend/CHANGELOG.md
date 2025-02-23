@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.3.0] - 2024-02-23
+
+### Changed
+
+- Refactor of anime scraper librarie to be more agnostic
+
 ## [2.2.0] - 2024-11-14
 
 ### Added
