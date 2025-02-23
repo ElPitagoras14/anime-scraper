@@ -65,6 +65,7 @@ Follow the specifir instruction for each project `Backend` and `Frontend` in the
 |Web|`4000`|
 |Api|`4002`|
 |PostgresSQL|`4003`|
+|Redis|`4004`|
 
 ## Author
 

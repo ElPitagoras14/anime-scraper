@@ -1,0 +1,1 @@
+from libraries.anime_scraper.factory import ScraperFactory

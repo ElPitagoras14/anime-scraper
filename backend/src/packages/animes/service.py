@@ -15,11 +15,7 @@ from databases.postgres import (
     UserSaveAnime,
     UserDownloadEpisode,
 )
-from libraries.animeflv_scraper import (
-    get_streaming_links,
-    get_emission_date,
-    parse_episode_range,
-)
+from libraries.anime_scraper import ScraperFactory
 from utils.utils import convert_size, format_size
 from queues import enqueue_episode_download_link_process, celery_app
 
@@ -34,9 +30,10 @@ from .utils import (
     cast_to_download_job_info,
     cast_to_episode_download_list,
     cast_to_statistics,
+    parse_episode_range,
 )
 
-HOST = "https://www3.animeflv.net"
+scraper = ScraperFactory.get_scraper("animeflv")
 
 
 def get_last_weekday(target_weekday: str) -> datetime:
@@ -96,6 +93,15 @@ def get_is_saved_anime_list(anime_list: list, user_id: str):
         return animes_saved_list
 
 
+async def img_link_to_b64(img_link: str):
+    b64_image = None
+    async with aiohttp.ClientSession() as session:
+        async with session.get(img_link, allow_redirects=True) as response:
+            cover_data = await response.read()
+            b64_image = base64.b64encode(cover_data).decode("utf-8")
+    return b64_image
+
+
 async def get_anime_info_controller(anime: str, user_id: str):
     logger.debug(f"Getting anime info for {anime}")
     anime_info = None
@@ -139,104 +145,68 @@ async def get_anime_info_controller(anime: str, user_id: str):
                 )
                 return anime_response
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(HOST + f"/anime/{anime}") as response:
-                page = await response.text()
-                soup = BeautifulSoup(page, "html.parser")
-                name = soup.find("h1").text
-                cover = soup.find_all("div", class_="AnimeCover")[0].find(
-                    "img"
-                )["src"]
-                cover_url = HOST + cover
-                is_finished = soup.find_all("p", class_="AnmStts")[0].text
-                is_finished = is_finished == "Finalizado"
-                description = soup.find_all("div", class_="Description")[
-                    0
-                ].text
-                parsed_description = description.replace("\n", "").strip()
+        scraper_anime_info = await scraper.get_anime_info(anime)
+        is_finished = scraper_anime_info["is_finished"]
+        name = scraper_anime_info["name"]
+        description = scraper_anime_info["description"]
+        raw_img = scraper_anime_info["cover_url"]
+        b64_image = await img_link_to_b64(raw_img)
 
-                b64_image = None
-                async with session.get(
-                    cover_url, allow_redirects=True
-                ) as response:
-                    cover_data = await response.read()
-                    b64_image = base64.b64encode(cover_data).decode("utf-8")
+        if anime_info:
+            if is_finished:
+                anime_info.is_finished = True
+                anime_info.week_day = None
+            anime_response = cast_anime_info(
+                anime,
+                name,
+                b64_image,
+                is_finished,
+                description,
+                anime_week_day,
+                is_saved,
+            )
+            logger.info(f"Updated anime {anime} in cache database")
 
-                new_week_day = None
-                anime_response = None
-                new_anime = None
-                if anime_info:
-                    if is_finished:
-                        anime_info.is_finished = True
-                        anime_info.week_day = None
-                    anime_response = cast_anime_info(
-                        anime,
-                        name,
-                        b64_image,
-                        is_finished,
-                        description,
-                        anime_week_day,
-                        is_saved,
-                    )
-                    logger.info(f"Updated anime {anime} in cache database")
+            db.commit()
+            db.refresh(anime_info)
 
-                    db.commit()
-                    db.refresh(anime_info)
+        else:
+            new_week_day = None
+            if not is_finished:
+                new_week_day = await scraper.get_emission_date(anime)
+            new_anime = Anime(
+                id=anime,
+                name=name,
+                description=description,
+                img=b64_image,
+                is_finished=is_finished,
+                week_day=new_week_day,
+                last_peek=datetime.now(timezone.utc),
+            )
+            db.add(new_anime)
+            db.commit()
+            db.refresh(new_anime)
 
-                else:
-                    if not is_finished:
-                        new_week_day = await get_emission_date(anime)
-                    new_anime = Anime(
-                        id=anime,
-                        name=name,
-                        description=parsed_description,
-                        img=b64_image,
-                        is_finished=is_finished,
-                        week_day=new_week_day,
-                        last_peek=datetime.now(timezone.utc),
-                    )
-                    db.add(new_anime)
-                    db.commit()
-                    db.refresh(new_anime)
+            anime_response = cast_anime_info(
+                anime,
+                name,
+                b64_image,
+                is_finished,
+                description,
+                new_week_day,
+                is_saved,
+            )
 
-                    anime_response = cast_anime_info(
-                        anime,
-                        name,
-                        b64_image,
-                        is_finished,
-                        parsed_description,
-                        new_week_day,
-                        is_saved,
-                    )
-                    logger.info(f"Found anime {anime} in animeflv")
-
-                return anime_response
+        return anime_response
 
 
 async def search_anime_query_controller(query: str, user_id: str):
     logger.debug(f"Searching anime with query: {query}")
-    async with aiohttp.ClientSession() as session:
-        async with session.get(HOST + f"/browse?q={query}") as response:
-            page = await response.text()
-            soup = BeautifulSoup(page, "html.parser")
-            pagination = soup.find_all("div", class_="NvCnAnm")[0]
-            total = int(len(pagination.find_all("li"))) - 2
-            anime_list = []
-            anime_list += get_anime_cards(page)
-
-            if total > 1:
-                for i in range(2, total + 1):
-                    async with session.get(
-                        HOST + f"/browse?q={query}&page={i}"
-                    ) as response:
-                        page = await response.text()
-                        anime_list += get_anime_cards(page)
-            anime_list_with_save = get_is_saved_anime_list(anime_list, user_id)
-            anime_card_list = cast_anime_card_list(anime_list_with_save)
-            logger.info(
-                f"Found {anime_card_list.total} anime with query: {query}"
-            )
-            return anime_card_list
+    anime_list = await scraper.search_anime(query)
+    anime_list_with_save = get_is_saved_anime_list(anime_list, user_id)
+    anime_card_list = cast_anime_card_list(anime_list_with_save)
+    logger.info(f"Found {anime_card_list.total} anime with query: {query}")
+    return anime_card_list
 
 
 async def get_streaming_links_controller(
@@ -263,7 +233,7 @@ async def get_streaming_links_controller(
             .first()
         )
         last_episode_name = last_episode.name if last_episode else None
-        new_stream_links = await get_streaming_links(
+        new_stream_links = await scraper.get_streaming_links(
             anime_name, last_episode_name
         )
 
@@ -353,6 +323,7 @@ async def enqueue_single_episode_download_links_controller(
     user_id: str = None,
     force: bool = False,
 ):
+    logger.debug(f"Enqueuing download link for {episode_link}")
     with DatabaseSession() as db:
         if not force:
             same_episode = (
@@ -374,7 +345,6 @@ async def enqueue_single_episode_download_links_controller(
                 return 201
 
         anime_name = "-".join(episode_link.split("/")[-1].split("-")[:-1])
-        user_id = user_id
         episode_name = episode_link.split("/")[-1]
         task = enqueue_episode_download_link_process.delay(
             episode_id, episode_link, anime_name

@@ -19,6 +19,29 @@ from .responses import (
 )
 
 
+def parse_episode_range(episodes_range):
+    episodes = []
+    ranges = episodes_range.split(",")
+    seen = set()
+    for item in ranges:
+        if "-" in item:
+            start, end = map(int, item.split("-"))
+            if start < 1 or end < 1:
+                continue
+            for episode_num in range(start, end + 1):
+                if episode_num not in seen:
+                    episodes.append(episode_num)
+                    seen.add(episode_num)
+        else:
+            parts = item.split()
+            for part in parts:
+                episode_num = int(part)
+                if episode_num >= 1 and episode_num not in seen:
+                    episodes.append(episode_num)
+                    seen.add(episode_num)
+    return episodes
+
+
 def cast_anime_info(
     anime_id: str,
     name: str,

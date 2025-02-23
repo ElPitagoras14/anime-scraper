@@ -5,11 +5,8 @@ import asyncio
 from celery import Celery
 from loguru import logger
 
-from libraries.animeflv_scraper import (
-    get_range_episodes_download_links,
-    get_single_episode_download_link,
-)
 from databases.postgres import DatabaseSession, Episode
+from libraries.anime_scraper import ScraperFactory
 from utils.utils import format_size
 
 from .config import redis_settings
@@ -21,6 +18,8 @@ PATH = redis_settings.ANIME_FOLDER
 
 MAX_RETRIES = 5
 RETRY_INTERVAL = 5
+
+scraper = ScraperFactory.get_scraper("animeflv")
 
 celery_app = Celery(
     "tasks",
@@ -48,21 +47,6 @@ celery_app.conf.update(
 timeout = aiohttp.ClientTimeout(
     total=None, connect=None, sock_connect=None, sock_read=600
 )
-
-
-async def get_download_links(episode_links: list[dict], episode_range: str):
-    download_links = await get_range_episodes_download_links(
-        episode_links, episode_range
-    )
-    not_valid_cnt = 0
-    for episode in download_links["download_links"]:
-        if not episode:
-            not_valid_cnt += 1
-    logger.info(
-        f"Found {len(download_links['download_links']) - not_valid_cnt} "
-        + f"download links for {download_links['anime']}"
-    )
-    return download_links
 
 
 async def download_episode(
@@ -151,7 +135,8 @@ def enqueue_episode_download_link_process(
 
     self.update_state(state="GETTING-LINK")
 
-    download_info = asyncio.run(get_single_episode_download_link(link))
+    anime_download_info = asyncio.run(scraper.get_download_link(link))
+    download_info = anime_download_info.get("download_info")
 
     if not download_info:
         logger.error(f"Error getting download link for {episode_name}")
