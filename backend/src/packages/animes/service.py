@@ -1,804 +1,655 @@
-import base64
-import aiohttp
+from datetime import datetime, timezone, timedelta
 import os
-from celery.result import AsyncResult
+from ani_scrapy.async_api import JKAnimeScraper
 from loguru import logger
-from datetime import datetime, timedelta, timezone
-from bs4 import BeautifulSoup
-from sqlalchemy import exists, text
+from sqlalchemy import desc
+from starlette import status
 
+from worker import celery_app
+from utils.exceptions import NotFoundException, ConflictException
 from databases.postgres import (
     DatabaseSession,
     Anime,
+    Genre,
+    AnimeRelation,
     Episode,
-    User,
+    OtherTitle,
     UserSaveAnime,
     UserDownloadEpisode,
+    related_types_id,
 )
-from libraries.anime_scraper import ScraperFactory
-from utils.utils import convert_size, format_size
-from queues import enqueue_episode_download_link_process, celery_app
-
 from .utils import (
-    cast_anime_card_list,
+    cast_download_task_list,
+    cast_downloaded_anime_list,
+    cast_episode_download_list,
+    cast_in_emission_anime_list,
+    cast_job_id,
+    cast_search_anime_result_list,
     cast_anime_info,
-    cast_anime_info_list,
-    cast_anime_size_list,
-    cast_anime_streaming_links,
-    cast_download_job,
-    cast_download_job_list,
-    cast_to_download_job_info,
-    cast_to_episode_download_list,
-    cast_to_statistics,
-    parse_episode_range,
 )
+from .config import anime_settings
 
-scraper = ScraperFactory.get_scraper("animeflv")
-
-
-def get_last_weekday(target_weekday: str) -> datetime:
-    if not target_weekday:
-        return None
-    weekdays = [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-    ]
-    today = datetime.now(timezone.utc)
-    days_difference = (today.weekday() - weekdays.index(target_weekday)) % 7
-    return today - timedelta(days=days_difference)
+scraper = JKAnimeScraper(verbose=True, level="DEBUG")
+ANIMES_FOLDER = anime_settings.ANIMES_FOLDER
 
 
-def get_anime_cards(page: str):
-    soup = BeautifulSoup(page, "html.parser")
-    anime_list = []
-    anime_container = soup.find_all(
-        "ul", class_="ListAnimes AX Rows A03 C02 D02"
-    )[0].find_all("li")
-    for anime in anime_container:
-        name = anime.find("h3").text
-        anime_id = anime.find("a")["href"].split("/")[-1]
-        cover = anime.find("img")["src"]
-        cover_url = cover
-        anime_list.append(
-            {"name": name, "cover_url": cover_url, "anime_id": anime_id}
-        )
-    return anime_list
+def get_anime_info_to_dict(
+    anime_db: Anime, downloaded_episodes_ids: list[int]
+) -> dict:
+    return {
+        "id": anime_db.id,
+        "title": anime_db.title,
+        "type": anime_db.type,
+        "poster": anime_db.poster,
+        "season": anime_db.season,
+        "other_titles": [title.name for title in anime_db.other_titles],
+        "description": anime_db.description,
+        "genres": [genre.name for genre in anime_db.genres],
+        "related_info": [
+            {
+                "id": related.related_anime.id,
+                "title": related.related_anime.title,
+                "type": related.type_related.name,
+            }
+            for related in anime_db.relations
+        ],
+        "week_day": anime_db.week_day,
+        "is_finished": anime_db.is_finished,
+        "last_scraped_at": anime_db.last_scraped_at,
+        "last_forced_update": anime_db.last_forced_update,
+        "episodes": [
+            {
+                "id": episode.ep_number,
+                "anime_id": episode.anime_id,
+                "image_preview": episode.preview,
+                "is_downloaded": episode.id in downloaded_episodes_ids,
+            }
+            for episode in anime_db.episodes
+        ],
+    }
 
 
-def get_is_saved_anime_list(anime_list: list, user_id: str):
-    logger.debug("Getting saved animes")
-    with DatabaseSession() as db:
-        anime_names = [anime["name"] for anime in anime_list]
-        saved_animes = (
-            db.query(Anime)
-            .join(UserSaveAnime, Anime.id == UserSaveAnime.anime_id)
-            .join(User, User.id == UserSaveAnime.user_id)
-            .filter(User.id == user_id)
-            .filter(Anime.name.in_(anime_names))
-            .all()
-        )
-        animes_saved_list = []
-        for anime in anime_list:
-            is_saved = False
-            for saved_anime in saved_animes:
-                if anime["name"] == saved_anime.name:
-                    is_saved = True
-                    break
-            animes_saved_list.append({**anime, "is_saved": is_saved})
-        return animes_saved_list
+async def add_new_anime(db: DatabaseSession, base_url: str, anime_id: str):
+    logger.debug(f"Adding anime to database: {anime_id}")
+    anime_info = await scraper.get_anime_info(anime_id, tab_timeout=300)
+    week_day = None
+    if anime_info.next_episode_date:
+        week_day = anime_info.next_episode_date.strftime("%A")
 
-
-async def img_link_to_b64(img_link: str):
-    b64_image = None
-    async with aiohttp.ClientSession() as session:
-        async with session.get(img_link, allow_redirects=True) as response:
-            cover_data = await response.read()
-            b64_image = base64.b64encode(cover_data).decode("utf-8")
-    return b64_image
-
-
-async def get_anime_info_controller(anime: str, user_id: str):
-    logger.debug(f"Getting anime info for {anime}")
-    anime_info = None
-    with DatabaseSession() as db:
-        anime_info = db.query(Anime).filter(Anime.id == anime).first()
-        is_saved = db.query(
-            exists()
-            .where(UserSaveAnime.anime_id == anime)
-            .where(UserSaveAnime.user_id == user_id)
-        ).scalar()
-
-        anime_week_day = None
-        if anime_info:
-            anime_is_finished = anime_info.is_finished
-            anime_week_day = anime_info.week_day
-            anime_last_peek = anime_info.last_peek
-            today = datetime.now(timezone.utc)
-            today_weekday = today.strftime("%A")
-
-            anime_info.last_peek = datetime.now(timezone.utc)
-            last_weekday = get_last_weekday(anime_week_day)
-
-            if (
-                anime_is_finished
-                or not anime_week_day
-                or (
-                    anime_week_day != today_weekday
-                    and anime_last_peek.replace(tzinfo=timezone.utc)
-                    >= last_weekday
-                )
-            ):
-                logger.info(f"Found anime {anime} in cache database")
-                anime_response = cast_anime_info(
-                    anime_info.id,
-                    anime_info.name,
-                    anime_info.img,
-                    anime_info.is_finished,
-                    anime_info.description,
-                    anime_info.week_day,
-                    is_saved,
-                )
-                return anime_response
-
-        scraper_anime_info = await scraper.get_anime_info(anime)
-        is_finished = scraper_anime_info["is_finished"]
-        name = scraper_anime_info["name"]
-        description = scraper_anime_info["description"]
-        raw_img = scraper_anime_info["cover_url"]
-        b64_image = await img_link_to_b64(raw_img)
-
-        if anime_info:
-            if is_finished:
-                anime_info.is_finished = True
-                anime_info.week_day = None
-            anime_response = cast_anime_info(
-                anime,
-                name,
-                b64_image,
-                is_finished,
-                description,
-                anime_week_day,
-                is_saved,
-            )
-            logger.info(f"Updated anime {anime} in cache database")
-
-            db.commit()
-            db.refresh(anime_info)
-
-        else:
-            new_week_day = None
-            if not is_finished:
-                new_week_day = await scraper.get_emission_date(anime)
-            new_anime = Anime(
-                id=anime,
-                name=name,
-                description=description,
-                img=b64_image,
-                is_finished=is_finished,
-                week_day=new_week_day,
-                last_peek=datetime.now(timezone.utc),
-            )
-            db.add(new_anime)
-            db.commit()
-            db.refresh(new_anime)
-
-            anime_response = cast_anime_info(
-                anime,
-                name,
-                b64_image,
-                is_finished,
-                description,
-                new_week_day,
-                is_saved,
-            )
-
-        return anime_response
-
-
-async def search_anime_query_controller(query: str, user_id: str):
-    logger.debug(f"Searching anime with query: {query}")
-    anime_list = await scraper.search_anime(query)
-    anime_list_with_save = get_is_saved_anime_list(anime_list, user_id)
-    anime_card_list = cast_anime_card_list(anime_list_with_save)
-    logger.info(f"Found {anime_card_list.total} anime with query: {query}")
-    return anime_card_list
-
-
-async def get_streaming_links_controller(
-    anime_name: str,
-):
-    logger.debug(f"Getting streaming links for {anime_name}")
-    with DatabaseSession() as db:
-        last_episode = None
-        anime = db.query(Anime).filter(Anime.id == anime_name).first()
-        if not anime:
-            return (
-                False,
-                "Anime not found. Please search the anime info first.",
-            )
-
-    with DatabaseSession() as db:
-        anime = db.query(Anime).filter(Anime.id == anime_name).first()
-        anime_id = anime.id
-
-        last_episode = (
-            db.query(Episode)
-            .filter(Episode.anime_id == anime_id)
-            .order_by(Episode.id.desc())
-            .first()
-        )
-        last_episode_name = last_episode.name if last_episode else None
-        new_stream_links = await scraper.get_streaming_links(
-            anime_name, last_episode_name
-        )
-
-        streaming_links = (
-            db.query(Episode)
-            .filter(Episode.anime_id == anime_id)
-            .order_by(Episode.id)
-            .all()
-        )
-        if new_stream_links:
-            stream_to_add = []
-            for idx, stream in enumerate(new_stream_links):
-                stream_to_add.append(
-                    Episode(
-                        anime_id=anime_id,
-                        episode_id=idx + len(streaming_links) + 1,
-                        name=stream["name"],
-                        link=stream["link"],
-                    )
-                )
-            db.add_all(stream_to_add)
-            db.commit()
-            streaming_links += stream_to_add
-        logger.info(
-            f"Found {len(streaming_links)} streaming links for {anime.name}"
-        )
-        return True, cast_anime_streaming_links(anime.name, streaming_links)
-
-
-async def enqueue_range_episodes_download_links_controller(
-    episode_links: list[dict], episode_range: str, current_user: dict
-):
-    range_num = parse_episode_range(episode_range)
-    anime_name = "-".join(
-        episode_links[0]["link"].split("/")[-1].split("-")[:-1]
+    new_anime = Anime(
+        id=anime_info.id,
+        title=anime_info.title,
+        description=anime_info.synopsis,
+        poster=anime_info.poster,
+        type=anime_info.type.value,
+        is_finished=anime_info.is_finished,
+        week_day=week_day,
+        last_scraped_at=datetime.now(timezone.utc),
+        last_forced_update=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc),
     )
-    user_id = current_user["sub"]
-    jobs = []
+    db.add(new_anime)
+    db.flush()
+    logger.debug(f"Added anime to database: {anime_info.id}")
 
-    with DatabaseSession() as db:
-        for episode_num in range_num:
-            episode_info = episode_links[episode_num - 1]
-            link = episode_info["link"]
-            episode_id = episode_info["id"]
-            episode_name = link.split("/")[-1]
-            task = enqueue_episode_download_link_process.delay(
-                episode_id, link, anime_name
-            )
-            logger.debug(f"Task with ID {task.id} enqueued")
-
-            episode = (
-                db.query(Episode).filter(Episode.id == episode_id).first()
-            )
-            if episode:
-                episode.job_id = task.id
-                downloaded_insert = UserDownloadEpisode(
-                    episode_id=episode_id, user_id=user_id
-                )
-                db.add(downloaded_insert)
-                db.commit()
-                db.refresh(episode)
-
-            jobs.append([anime_name, episode_name, task.id])
-
-    logger.info(f"Enqueued {len(jobs)} download tasks for {anime_name}")
-    return cast_download_job_list(jobs, len(jobs))
-
-
-async def force_re_download_controller(episode_id: int):
-    with DatabaseSession() as db:
-        episode = db.query(Episode).filter(Episode.id == episode_id).first()
-        if not episode:
-            return None
-
-        if episode.file_path:
-            episode.file_path = None
-            db.commit()
-
-        return await enqueue_single_episode_download_links_controller(
-            episode.link, episode_id, force=True
+    for genre in anime_info.genres:
+        new_genre = Genre(
+            anime_id=anime_info.id,
+            name=genre,
         )
+        db.add(new_genre)
 
+    logger.debug("Added genres to database")
 
-async def enqueue_single_episode_download_links_controller(
-    episode_link: str,
-    episode_id: int,
-    user_id: str = None,
-    force: bool = False,
-):
-    logger.debug(f"Enqueuing download link for {episode_link}")
-    with DatabaseSession() as db:
-        if not force:
-            same_episode = (
-                db.query(Episode).filter(Episode.id == episode_id).first()
+    for related in anime_info.related_info:
+        check_related = db.query(Anime).where(Anime.id == related.id).first()
+        if not check_related:
+            new_dummy_anime = Anime(
+                id=related.id,
+                title=related.title,
             )
-            has_downloaded = (
-                db.query(UserDownloadEpisode)
-                .filter(UserDownloadEpisode.episode_id == episode_id)
-                .filter(UserDownloadEpisode.user_id == user_id)
-                .first()
-            )
-            if same_episode.file_path or same_episode.job_id:
-                if not has_downloaded:
-                    downloaded_insert = UserDownloadEpisode(
-                        episode_id=episode_id, user_id=user_id
-                    )
-                    db.add(downloaded_insert)
-                    db.commit()
-                return 201
-
-        anime_name = "-".join(episode_link.split("/")[-1].split("-")[:-1])
-        episode_name = episode_link.split("/")[-1]
-        task = enqueue_episode_download_link_process.delay(
-            episode_id, episode_link, anime_name
+            db.add(new_dummy_anime)
+            db.flush()
+        new_anime_relation = AnimeRelation(
+            anime_id=anime_info.id,
+            related_anime_id=related.id,
+            type_related_id=related_types_id[related.type.value],
         )
-        logger.info(f"Task with ID {task.id} enqueued")
+        db.add(new_anime_relation)
 
-        episode = db.query(Episode).filter(Episode.id == episode_id).first()
-        if episode:
-            episode.job_id = task.id
-            if not force:
-                downloaded_insert = UserDownloadEpisode(
-                    episode_id=episode_id, user_id=user_id
-                )
-                db.add(downloaded_insert)
-            db.commit()
-            db.refresh(episode)
+    logger.debug("Added related animes to database")
 
-    item = [anime_name, episode_name, task.id]
-    return cast_download_job(item)
-
-
-async def get_user_download_episodes_controller(
-    page: int, size: int, user_id: dict
-):
-    logger.debug(f"Getting download episodes for page {page} and size {size}")
-    with DatabaseSession() as db:
-        episodes_query = (
-            db.query(Episode, Anime, UserDownloadEpisode)
-            .join(
-                UserDownloadEpisode,
-                Episode.id == UserDownloadEpisode.episode_id,
-            )
-            .join(User, User.id == UserDownloadEpisode.user_id)
-            .join(Anime, Anime.id == Episode.anime_id)
-            .filter(User.id == user_id)
-            .filter(Episode.job_id.isnot(None) | Episode.file_path.isnot(None))
-            .order_by(UserDownloadEpisode.created_at.desc())
+    for title in anime_info.other_titles:
+        new_title = OtherTitle(
+            anime_id=anime_info.id,
+            name=title,
         )
+        db.add(new_title)
 
-        total = episodes_query.count()
+    for episode in anime_info.episodes:
+        new_episode = Episode(
+            anime_id=anime_info.id,
+            ep_number=episode.id,
+            preview=episode.image_preview,
+            url=f"{base_url}/{episode.id}",
+        )
+        db.add(new_episode)
+    db.flush()
 
-        page = int(page)
-        size = int(size)
-        if size == -1:
-            offset = None
-            limit = None
+    logger.debug("Added episodes to database")
+
+
+async def get_anime_controller(
+    anime_id: str, user_id: str
+) -> tuple[int, dict]:
+    logger.debug(f"Getting anime with id: {anime_id}")
+    base_url = f"https://jkanime.net/{anime_id}"
+    with DatabaseSession() as db:
+        anime_db = db.query(Anime).where(Anime.id == anime_id).first()
+        if not anime_db:
+            await add_new_anime(db, base_url, anime_id)
         else:
-            offset = page * size
-            limit = size
-
-        if offset is not None:
-            episodes_query = episodes_query.offset(offset)
-        if limit is not None:
-            episodes_query = episodes_query.limit(limit)
-
-        episode_list = episodes_query.all()
-
-        if not episode_list:
-            return None
-
-        items = []
-        for episode, anime, user_download in episode_list:
-            filename = f"{anime.id}-{episode.episode_id}.mp4"
-            if episode.file_path:
-                items.append(
-                    [
-                        episode.id,
-                        anime.img,
-                        anime.name,
-                        episode.name,
-                        user_download.created_at,
-                        "DOWNLOADED",
-                        100,
-                        format_size(episode.size),
-                        filename,
-                    ]
+            if not anime_db.last_scraped_at:
+                logger.debug("Dummy anime inserted, updating")
+                anime_info = await scraper.get_anime_info(
+                    anime_id, tab_timeout=300
                 )
-            else:
-                result = AsyncResult(episode.job_id, app=celery_app)
-                progress = 0
-                if result:
-                    info = result.info
-                    if info is not None and type(info) is dict:
-                        progress = info.get("progress", 0)
-                items.append(
-                    [
-                        episode.id,
-                        anime.img,
-                        anime.name,
-                        episode.name,
-                        user_download.created_at,
-                        result.state,
-                        progress,
-                        (
-                            format_size(episode.size)
-                            if episode.size
-                            else "Unknown"
-                        ),
-                        filename,
-                    ]
-                )
-        return cast_to_episode_download_list(items, total)
+                week_day = None
+                if anime_info.next_episode_date:
+                    week_day = anime_info.next_episode_date.strftime("%A")
 
+                anime_db.description = anime_info.synopsis
+                anime_db.poster = anime_info.poster
+                anime_db.type = anime_info.type.value
+                anime_db.last_scraped_at = datetime.now(timezone.utc)
+                anime_db.last_forced_update = datetime.now(timezone.utc)
+                anime_db.is_finished = anime_info.is_finished
+                anime_db.week_day = week_day
 
-async def delete_user_download_episodes_controller(
-    user_id: str, episode_id: int
-):
-    logger.debug(f"Deleting download episode {episode_id}")
-    with DatabaseSession() as db:
-        download_episode = (
-            db.query(UserDownloadEpisode)
-            .filter(UserDownloadEpisode.episode_id == episode_id)
-            .filter(UserDownloadEpisode.user_id == user_id)
-            .first()
-        )
-        if not download_episode:
-            return False
+                db.add(anime_db)
+                logger.debug(f"Added anime to database: {anime_info.id}")
 
-        db.delete(download_episode)
-        db.commit()
+                for genre in anime_info.genres:
+                    new_genre = Genre(
+                        anime_id=anime_info.id,
+                        name=genre,
+                    )
+                    db.add(new_genre)
 
-        references = (
-            db.query(UserDownloadEpisode)
-            .filter(UserDownloadEpisode.episode_id == episode_id)
-            .count()
-        )
-        if references == 0:
-            episode = (
-                db.query(Episode).filter(Episode.id == episode_id).first()
+                for related in anime_info.related_info:
+                    check_related = (
+                        db.query(Anime).where(Anime.id == related.id).first()
+                    )
+                    if not check_related:
+                        new_dummy_anime = Anime(
+                            id=related.id,
+                            title=related.title,
+                        )
+                        db.add(new_dummy_anime)
+                        db.flush()
+                    new_anime_relation = AnimeRelation(
+                        anime_id=anime_info.id,
+                        related_anime_id=related.id,
+                        type_related_id=related_types_id[related.type.value],
+                    )
+                    db.add(new_anime_relation)
+
+                logger.debug("Added genres and related animes to database")
+
+                for episode in anime_info.episodes:
+                    new_episode = Episode(
+                        anime_id=anime_info.id,
+                        ep_number=episode.id,
+                        preview=episode.image_preview,
+                        url=f"{base_url}/{episode.id}",
+                    )
+                    db.add(new_episode)
+                db.flush()
+                logger.debug("Added episodes to database")
+
+            logger.debug(f"Found anime in database: {anime_db.id}")
+
+            last_scraped_at = anime_db.last_scraped_at
+            last_scraped_at_aware = last_scraped_at.replace(
+                tzinfo=timezone.utc
             )
-            if episode.file_path:
-                if os.path.exists(episode.file_path):
-                    os.remove(episode.file_path)
-            episode.file_path = None
-            episode.job_id = None
-            db.commit()
+            current_time = datetime.now(timezone.utc)
 
-    return True
+            if last_scraped_at_aware < (current_time - timedelta(hours=1)):
+                logger.debug("Old anime info, updating")
+                anime = await scraper.get_anime_info(anime_id)
+                anime_db.last_scraped_at = current_time
+                anime_db.is_finished = anime.is_finished
 
+                num_anime_episodes = len(anime.episodes)
+                num_db_episodes = len(anime_db.episodes)
 
-async def get_job_info_controller(job_id: str):
-    result = AsyncResult(job_id, app=celery_app)
-    if result:
-        info = result.info
-        progress = 0
-        total = "Unknown"
-        if info is not None:
-            progress = info.get("progress", 0)
-            total = info.get("total", "Unknown")
-        item = [job_id, result.state, progress, total]
-        return cast_to_download_job_info(item)
-    return None
+                if num_anime_episodes > num_db_episodes:
+                    logger.debug("Updating episodes")
+                    for idx in range(num_db_episodes, num_anime_episodes):
+                        episode = anime.episodes[idx]
+                        new_episode = Episode(
+                            anime_id=anime_id,
+                            ep_number=episode.id,
+                            preview=episode.image_preview,
+                            url=f"{base_url}/{episode.id}",
+                        )
+                        db.add(new_episode)
+                    db.flush()
+                    logger.debug("Added episodes to database")
 
-
-async def download_episode_controller(episode_id: int):
-    logger.debug(f"Downloading episode {episode_id}")
-    with DatabaseSession() as db:
-        episode, anime = (
-            db.query(Episode, Anime)
-            .join(Anime, Anime.id == Episode.anime_id)
-            .filter(Episode.id == episode_id)
+        anime_db = db.query(Anime).where(Anime.id == anime_id).first()
+        saved_anime = (
+            db.query(UserSaveAnime)
+            .where(
+                UserSaveAnime.user_id == user_id,
+                UserSaveAnime.anime_id == anime_id,
+            )
             .first()
         )
-        if not episode:
-            return None
+        episode_ids = [episode.id for episode in anime_db.episodes]
+        downloaded_episodes = (
+            db.query(UserDownloadEpisode)
+            .filter(
+                UserDownloadEpisode.user_id == user_id,
+                UserDownloadEpisode.episode_id.in_(episode_ids),
+            )
+            .all()
+        )
+        downloaded_episodes_ids = [
+            episode_download.episode_id
+            for episode_download in downloaded_episodes
+        ]
+        saved_anime_info = {
+            "is_saved": saved_anime is not None,
+            "save_date": saved_anime.created_at if saved_anime else None,
+        }
+        new_anime_info = get_anime_info_to_dict(
+            anime_db, downloaded_episodes_ids
+        )
+        casted_anime = cast_anime_info(new_anime_info, saved_anime_info)
+        return status.HTTP_200_OK, casted_anime
 
-        if not episode.file_path:
-            return None
 
-        return [episode.file_path, f"{anime.id}-{episode.episode_id}"]
+async def search_anime_controller(query: str, user_id: str):
+    logger.debug(f"Searching for {query}")
+    animes = await scraper.search_anime(query)
+    logger.debug(f"Found {len(animes.animes)} animes")
+
+    with DatabaseSession() as db:
+        saved_animes = (
+            db.query(UserSaveAnime)
+            .where(UserSaveAnime.user_id == user_id)
+            .all()
+        )
+        saved_ids = [anime.anime_id for anime in saved_animes]
+
+        search_animes = [
+            {
+                "id": anime.id,
+                "title": anime.title,
+                "type": anime.type.value,
+                "poster": anime.poster,
+                "is_saved": anime.id in saved_ids,
+                "save_date": (
+                    saved_animes[saved_ids.index(anime.id)].created_at
+                    if anime.id in saved_ids
+                    else None
+                ),
+            }
+            for anime in animes.animes
+        ]
+
+        casted_animes = cast_search_anime_result_list(search_animes)
+        return status.HTTP_200_OK, casted_animes
 
 
-async def get_saved_animes_controller(user_id: str):
+async def get_saved_animes_controller(user_id: str) -> tuple[int, dict]:
     logger.debug("Getting saved animes")
     with DatabaseSession() as db:
-        anime_list = (
-            db.query(Anime)
-            .join(UserSaveAnime, Anime.id == UserSaveAnime.anime_id)
-            .join(User, User.id == UserSaveAnime.user_id)
-            .filter(User.id == user_id)
+        animes_db = (
+            db.query(UserSaveAnime)
+            .where(UserSaveAnime.user_id == user_id)
             .all()
         )
-        anime_list_with_save = [
-            {**anime.__dict__, "is_saved": True} for anime in anime_list
+
+        animes = [
+            {
+                "id": anime.anime.id,
+                "title": anime.anime.title,
+                "type": anime.anime.type,
+                "poster": anime.anime.poster,
+                "is_saved": True,
+                "save_date": anime.anime.created_at,
+            }
+            for anime in animes_db
         ]
-        anime_info_list = cast_anime_info_list(anime_list_with_save)
-        logger.info(f"Found {anime_info_list.total} saved animes")
-        return anime_info_list
+
+        casted_animes = cast_search_anime_result_list(animes)
+        return status.HTTP_200_OK, casted_animes
 
 
-async def save_anime_controller(anime_id: str, user_id: str):
+async def save_anime_controller(
+    anime_id: str, user_id: str
+) -> tuple[int, str]:
+    logger.debug(f"Saving anime with id: {anime_id}")
+    base_url = f"https://jkanime.net/{anime_id}"
     with DatabaseSession() as db:
-        anime = db.query(Anime).filter(Anime.id == anime_id).first()
-        if not anime:
-            return (
-                False,
-                "Anime not found. Please search the anime info first.",
-            )
-
-    with DatabaseSession() as db:
-        anime = db.query(Anime).filter(Anime.id == anime_id).first()
-        is_saved = db.query(
-            exists()
-            .where(UserSaveAnime.user_id == user_id)
-            .where(UserSaveAnime.anime_id == anime_id)
-        ).scalar()
-
-        if is_saved:
-            return True, cast_anime_info(
-                anime.id,
-                anime.name,
-                anime.img,
-                anime.is_finished,
-                anime.description,
-                anime.week_day,
-                is_saved=True,
-            )
-
-        user_saved_anime = UserSaveAnime(user_id=user_id, anime_id=anime_id)
-        db.add(user_saved_anime)
-        db.commit()
-        return True, cast_anime_info(
-            anime.id,
-            anime.name,
-            anime.img,
-            anime.is_finished,
-            anime.description,
-            anime.week_day,
-            is_saved=True,
+        anime_db = db.query(Anime).where(Anime.id == anime_id).first()
+        if not anime_db:
+            await add_new_anime(db, base_url, anime_id)
+        new_saved_anime = UserSaveAnime(
+            user_id=user_id,
+            anime_id=anime_id,
         )
+        db.add(new_saved_anime)
+        db.flush()
+        logger.debug(f"Saved anime with id: {anime_id}")
+
+        return status.HTTP_200_OK, "Anime saved successfully"
 
 
-async def delete_saved_anime_controller(anime_id: str, user_id: str):
+async def unsave_anime_controller(
+    anime_id: str, user_id: str, request_id: str
+) -> tuple[int, str]:
+    logger.debug(f"Unsaving anime with id: {anime_id}")
     with DatabaseSession() as db:
-        anime = db.query(Anime).filter(Anime.id == anime_id).first()
-        if not anime:
-            await get_anime_info_controller(anime_id, user_id)
-
-    with DatabaseSession() as db:
-        anime = db.query(Anime).filter(Anime.id == anime_id).first()
-        is_saved = db.query(
-            exists()
-            .where(UserSaveAnime.user_id == user_id)
-            .where(UserSaveAnime.anime_id == anime_id)
-        ).scalar()
-
-        if not is_saved:
-            return True, cast_anime_info(
-                anime.id,
-                anime.name,
-                anime.img,
-                anime.is_finished,
-                anime.description,
-                anime.week_day,
-                is_saved=False,
-            )
-
-        user_saved_anime = (
+        anime_db = db.query(Anime).where(Anime.id == anime_id).first()
+        if not anime_db:
+            logger.debug(f"Anime with id: {anime_id} not found")
+            raise NotFoundException("Anime not found", request_id=request_id)
+        saved_anime = (
             db.query(UserSaveAnime)
-            .filter(UserSaveAnime.user_id == user_id)
-            .filter(UserSaveAnime.anime_id == anime_id)
+            .where(
+                UserSaveAnime.user_id == user_id,
+                UserSaveAnime.anime_id == anime_id,
+            )
             .first()
         )
-        db.delete(user_saved_anime)
-        db.commit()
-        return True, cast_anime_info(
-            anime.id,
-            anime.name,
-            anime.img,
-            anime.is_finished,
-            anime.description,
-            anime.week_day,
-            is_saved=False,
-        )
+        if not saved_anime:
+            logger.debug(f"Saved anime with id: {anime_id} not found")
+            raise NotFoundException("Anime not found", request_id=request_id)
+        db.delete(saved_anime)
+        logger.debug(f"Unsaved anime with id: {anime_id}")
+
+        return status.HTTP_200_OK, "Anime unsaved successfully"
 
 
-def get_episodes_path(anime_id: str):
+async def get_in_emission_animes_controller(user_id: str) -> tuple[int, dict]:
+    logger.debug("Getting in-emission animes")
     with DatabaseSession() as db:
-        episodes_with_file = (
-            db.query(Episode)
-            .filter(Episode.anime_id == anime_id)
-            .filter(Episode.file_path.isnot(None))
-            .all()
-        )
-        if not episodes_with_file:
-            return []
-
-        episodes = []
-        for episode in episodes_with_file:
-            episodes.append(
-                {
-                    "episode_id": episode.episode_id,
-                    "name": episode.name,
-                    "file_path": episode.file_path,
-                }
-            )
-        return episodes
-
-
-async def get_all_animes_cache_controller(
-    sort_by: str, desc: bool, page: int, size: int
-):
-    sort_column = "total_cache_in_b"
-    order = "DESC"
-    if sort_by is not None:
-        sort_column = sort_by
-        order = "DESC" if desc else "ASC"
-
-    with DatabaseSession() as db:
-        count_query = text(
-            """
-            SELECT
-                COUNT(*)
-            FROM
-                animes
-            """
-        )
-        total = db.execute(count_query).fetchone()[0]
-        query = text(
-            f"""
-            WITH
-            serie_cache AS (
-                SELECT
-                    a.id,
-                    a.name,
-                    SUM(pg_column_size(a)) AS cache_in_b
-                FROM
-                    animes a
-                GROUP BY a.id
-            ),
-            episodes_cache AS (
-                SELECT
-                    e.anime_id,
-                    SUM(pg_column_size(e)) AS cache_in_b
-                FROM
-                    episodes e
-                GROUP BY e.anime_id
-            )
-            SELECT
-                serie_cache.id,
-                serie_cache.name,
-                COALESCE(serie_cache.cache_in_b, 0)
-                + COALESCE(episodes_cache.cache_in_b, 0) AS total_cache_in_b
-            FROM
-                serie_cache
-            LEFT JOIN
-                episodes_cache
-            ON
-                serie_cache.id = episodes_cache.anime_id
-            ORDER BY {sort_column} {order}
-            {f"LIMIT {size} OFFSET {size * page}" if size != -1 else ""};
-            """
-        )
-        results = db.execute(query).fetchall()
-
-        clean_results = []
-        total_size = 0
-        for res in results:
-            anime_id = res[0]
-            episodes_with_file = get_episodes_path(anime_id)
-
-            episodes_size = 0
-            for episode in episodes_with_file:
-                path = episode["file_path"]
-                if not os.path.exists(path):
-                    continue
-                episodes_size += os.path.getsize(path)
-
-            clean_results.append(
-                {
-                    "anime_id": res[0],
-                    "name": res[1],
-                    "size": res[2] + episodes_size,
-                }
-            )
-            total_size += res[2] + episodes_size
-
-        formated_results = []
-        for res in clean_results:
-            formated_results.append(
-                {
-                    "anime_id": res["anime_id"],
-                    "name": res["name"],
-                    "size": float(convert_size(res["size"], "MB")[:-3]),
-                }
-            )
-        sorted_results = sorted(
-            formated_results, key=lambda x: x["size"], reverse=(not desc)
-        )
-
-        formated_total_size = convert_size(total_size, "MB")
-
-        return cast_anime_size_list(sorted_results, total, formated_total_size)
-
-
-async def delete_anime_cache_controller(anime_id: str):
-    logger.debug(f"Deleting anime {anime_id} from cache database")
-    with DatabaseSession() as db:
-        episodes_with_job = (
-            db.query(Episode)
-            .filter(Episode.anime_id == anime_id)
-            .filter(Episode.job_id.isnot(None))
-            .all()
-        )
-
-        for episode in episodes_with_job:
-            celery_app.control.revoke(
-                episode.job_id, terminate=True, signal="SIGKILL"
-            )
-
-        episodes_with_file = (
-            db.query(Episode)
-            .filter(Episode.anime_id == anime_id)
-            .filter(Episode.file_path.isnot(None))
-            .all()
-        )
-
-        for episode in episodes_with_file:
-            if os.path.exists(episode.file_path):
-                os.remove(episode.file_path)
-
-        anime = db.query(Anime).filter(Anime.id == anime_id).first()
-        if not anime:
-            return False, "Anime not found in cache database"
-
-        db.delete(anime)
-        db.commit()
-        return True, "Anime deleted from cache database"
-
-
-async def get_user_statistics_controller(user_id: str):
-    with DatabaseSession() as db:
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            return None
-
-        animes_saved = (
+        animes_db = (
             db.query(UserSaveAnime)
-            .filter(UserSaveAnime.user_id == user_id)
-            .count()
+            .join(UserSaveAnime.anime)
+            .where(
+                UserSaveAnime.user_id == user_id, Anime.week_day.isnot(None)
+            )
+            .all()
+        )
+        animes = [
+            {
+                "id": anime.anime.id,
+                "title": anime.anime.title,
+                "type": anime.anime.type,
+                "poster": anime.anime.poster,
+                "is_saved": True,
+                "save_date": anime.anime.created_at,
+                "week_day": anime.anime.week_day,
+            }
+            for anime in animes_db
+            if anime.anime.week_day
+        ]
+
+        casted_animes = cast_in_emission_anime_list(animes)
+        return status.HTTP_200_OK, casted_animes
+
+
+async def get_downloads_controller(
+    user_id: str, anime_id: str | None = None, limit: int = 10, page: int = 1
+) -> tuple[int, dict]:
+    logger.debug("Getting downloads")
+
+    with DatabaseSession() as db:
+        raw_downloads = db.query(UserDownloadEpisode).filter(
+            UserDownloadEpisode.user_id == user_id
         )
 
-        episodes_to_download = (
+        if anime_id:
+            raw_downloads = (
+                raw_downloads.join(UserDownloadEpisode.episode)
+                .join(Episode.anime)
+                .filter(Anime.id == anime_id)
+            )
+
+        count = raw_downloads.count()
+        downloads = (
+            raw_downloads.order_by(desc(UserDownloadEpisode.created_at))
+            .offset((page - 1) * limit)
+            .limit(limit)
+        ).all()
+
+        episode_downloads = [
+            {
+                "id": episode.episode_id,
+                "anime_id": episode.episode.anime_id,
+                "title": episode.episode.anime.title,
+                "episode_number": episode.episode.ep_number,
+                "poster": episode.episode.anime.poster,
+                "job_id": episode.episode.job_id,
+                "size": episode.episode.size,
+                "status": episode.episode.status,
+                "downloaded_at": episode.created_at,
+            }
+            for episode in downloads
+        ]
+
+        casted_episode_downloads = cast_episode_download_list(
+            episode_downloads, count
+        )
+
+    return status.HTTP_200_OK, casted_episode_downloads
+
+
+async def get_downloaded_animes_controller(user_id: str) -> tuple[int, dict]:
+    logger.debug("Getting downloaded animes")
+
+    with DatabaseSession() as db:
+        episode_downloads = (
             db.query(UserDownloadEpisode)
             .filter(UserDownloadEpisode.user_id == user_id)
-            .count()
+            .all()
+        )
+        anime_ids = [
+            episode_download.episode.anime_id
+            for episode_download in episode_downloads
+        ]
+
+        animes = db.query(Anime).filter(Anime.id.in_(anime_ids)).all()
+        animes_info = [
+            {
+                "id": anime.id,
+                "title": anime.title,
+            }
+            for anime in animes
+        ]
+
+        casted_animes = cast_downloaded_anime_list(animes_info, len(animes))
+        return status.HTTP_200_OK, casted_animes
+
+
+async def get_download_episode_controller(episode_id: int) -> tuple[int, dict]:
+    logger.debug(f"Getting download episode with id: {episode_id}")
+    with DatabaseSession() as db:
+        episode = (
+            db.query(Episode)
+            .filter(
+                Episode.id == episode_id,
+            )
+            .first()
+        )
+        if not episode:
+            return status.HTTP_404_NOT_FOUND, "Episode not found"
+
+        parsed_season = str(episode.anime.season).zfill(2)
+        anime_folder = (
+            f"{ANIMES_FOLDER}/{episode.anime_id}/Season {parsed_season}"
+        )
+        if not os.path.exists(anime_folder):
+            return status.HTTP_404_NOT_FOUND, "Episode not found"
+
+        parsed_episode_number = str(episode.ep_number).zfill(2)
+        file_path = (
+            f"{anime_folder}/{episode.anime_id} - S{parsed_season}E"
+            + f"{parsed_episode_number}.mp4"
         )
 
-        animes_in_emission = (
-            db.query(Anime)
-            .join(UserSaveAnime, Anime.id == UserSaveAnime.anime_id)
-            .filter(Anime.week_day.isnot(None))
-            .filter(UserSaveAnime.user_id == user_id)
-            .count()
+        casted_data = {
+            "path": file_path,
+            "filename": f"{episode.anime_id}-{episode.ep_number}.mp4",
+        }
+
+        return status.HTTP_200_OK, casted_data
+
+
+async def download_anime_controller(
+    anime_id: str, episode_number: int, user_id: str, request_id: str
+) -> tuple[int, str]:
+    logger.debug(f"Downloading anime with id: {anime_id} - {episode_number}")
+
+    with DatabaseSession() as db:
+        episode = (
+            db.query(Episode)
+            .filter(
+                Episode.anime_id == anime_id,
+                Episode.ep_number == episode_number,
+            )
+            .first()
         )
-        item = [animes_saved, episodes_to_download, animes_in_emission]
-        return cast_to_statistics(item)
+        if not episode:
+            raise NotFoundException("Episode not found", request_id=request_id)
+
+        download = (
+            db.query(UserDownloadEpisode)
+            .filter(
+                UserDownloadEpisode.user_id == user_id,
+                UserDownloadEpisode.episode_id == episode.id,
+            )
+            .first()
+        )
+        if download:
+            raise ConflictException(
+                "Download already in progress", request_id=request_id
+            )
+
+        general_download = (
+            db.query(UserDownloadEpisode)
+            .filter(
+                UserDownloadEpisode.episode_id == episode.id,
+            )
+            .first()
+        )
+        if general_download:
+            return status.HTTP_201_CREATED, cast_job_id(
+                general_download.episode.job_id
+            )
+
+        result = celery_app.send_task(
+            "tasks.download_anime",
+            args=[anime_id, episode_number, user_id, request_id],
+        )
+
+        new_download = UserDownloadEpisode(
+            user_id=user_id,
+            episode_id=episode.id,
+        )
+        db.add(new_download)
+
+        episode.job_id = result.id
+        episode.status = "PENDING"
+        db.add(episode)
+
+        logger.debug(f"Enqueued download with job id: {result.id}")
+
+        return status.HTTP_201_CREATED, cast_job_id(result.id)
+
+
+async def download_anime_bulk_controller(
+    anime_id: str, episode_numbers: list[int], user_id: str, request_id: str
+) -> tuple[int, list[dict]]:
+    logger.debug(f"Downloading anime with id: {anime_id}")
+    success_enqueued = []
+    failed_enqueued = []
+    with DatabaseSession() as db:
+        for ep_number in episode_numbers:
+            print(ep_number, anime_id)
+            try:
+                episode = (
+                    db.query(Episode)
+                    .filter(
+                        Episode.anime_id == anime_id,
+                        Episode.ep_number == ep_number,
+                    )
+                    .first()
+                )
+                if not episode:
+                    raise NotFoundException(
+                        "Episode not found", request_id=request_id
+                    )
+
+                episode_download = (
+                    db.query(UserDownloadEpisode)
+                    .filter(
+                        UserDownloadEpisode.episode_id == episode.id,
+                        UserDownloadEpisode.user_id == user_id,
+                    )
+                    .first()
+                )
+                if episode_download:
+                    logger.warning(
+                        f"Episode {episode.id} already enqueued for "
+                        + f"user {user_id}"
+                    )
+                    failed_enqueued.append([None, ep_number])
+                    continue
+
+                new_download = UserDownloadEpisode(
+                    episode_id=episode.id, user_id=user_id
+                )
+                db.add(new_download)
+
+                episode.status = "PENDING"
+                db.add(episode)
+
+                result = celery_app.send_task(
+                    "tasks.download_anime",
+                    args=[anime_id, episode.ep_number, user_id, request_id],
+                )
+                logger.debug(f"Enqueued download with job id: {result.id}")
+
+                episode.job_id = result.id
+                db.add(episode)
+                db.commit()
+                success_enqueued.append([result.id, ep_number])
+            except Exception as e:
+                logger.error(f"Error downloading episode: {e}")
+                failed_enqueued.append([None, ep_number])
+
+        parsed_data = []
+        for success in success_enqueued:
+            parsed_data.append(
+                {
+                    "job_id": success[0],
+                    "episode_number": success[1],
+                    "success": True,
+                }
+            )
+        for failed in failed_enqueued:
+            parsed_data.append(
+                {
+                    "job_id": failed[0],
+                    "episode_number": failed[1],
+                    "success": False,
+                }
+            )
+        casted_data = cast_download_task_list(parsed_data, len(parsed_data))
+        return status.HTTP_201_CREATED, casted_data

@@ -1,113 +1,110 @@
-import NextAuth, { DefaultSession } from "next-auth";
-import { jwtDecode, JwtPayload } from "jwt-decode";
+import NextAuth from "next-auth";
+import type {
+  AuthValidity,
+  BackendAccessJWT,
+  BackendJWT,
+  DecodedJWT,
+  UserObject,
+} from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { jwtDecode } from "jwt-decode";
+import type { JWT } from "next-auth/jwt";
 import axios from "axios";
 
-export interface CustomJWTPayload extends JwtPayload {
-  sub: string;
-  username: string;
-  is_admin: boolean;
-  is_active: boolean;
-  avatar: string;
-}
-
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      username: string;
-      isAdmin: boolean;
-      isActive: boolean;
-      avatar: string;
-      token: string;
-    } & DefaultSession["user"];
-  }
-}
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_SERVER_BACKEND_URL;
-const MAX_AGE = parseInt(process.env.AUTH_EXPIRE_MINUTES || "120");
+const API_URL = process.env.API_URL;
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
+      name: "Login",
       credentials: {
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
-        const loginOptions = {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          url: `${BACKEND_URL}/api/v2/auth/login`,
-          data: credentials,
-        };
-
         try {
-          const response = await axios(loginOptions);
-          const {
+          const loginOptions = {
+            method: "POST",
+            url: `${API_URL}/api/auth/login`,
             data: {
-              payload: { token },
+              username: credentials.username,
+              password: credentials.password,
             },
-          } = response;
-          if (!token) {
-            throw new Error("Invalid token");
-          }
-
-          const decodedToken = jwtDecode<CustomJWTPayload>(token);
-          const {
-            sub,
-            username,
-            is_admin: isAdmin,
-            is_active: isActive,
-            avatar,
-          } = decodedToken;
-          const user = {
-            id: sub as string,
-            username: username as string,
-            isAdmin: isAdmin as boolean,
-            isActive: isActive as boolean,
-            avatar: avatar as string,
-            token,
           };
-          return user;
-        } catch (error: any) {
-          const {
-            response: {
-              data: { message, statusCode },
-            },
-          } = error;
-          if (statusCode === 409) {
-            return null;
-          }
-          return message;
+
+          const response = await axios(loginOptions);
+          const tokens: BackendJWT = response.data.payload;
+
+          const access: DecodedJWT = jwtDecode(tokens.access);
+          const refresh: DecodedJWT = jwtDecode(tokens.refresh);
+
+          const user: UserObject = {
+            id: access.id,
+            username: access.username,
+            isActive: access.isActive,
+            role: access.role,
+          };
+
+          const validity: AuthValidity = {
+            validUntil: access.exp,
+            refreshUntil: refresh.exp,
+          };
+
+          return {
+            tokens,
+            user,
+            validity,
+          };
+        } catch (error) {
+          console.error(error);
+          return null;
         }
       },
     }),
   ],
-  jwt: {
-    maxAge: MAX_AGE * 60,
-  },
   callbacks: {
-    jwt: async ({ token, user, session }) => {
-      if (user) {
-        token.user = user;
+    jwt: async ({ token, user, account }) => {
+      if (user && account) {
+        console.log("Initial signin");
+        return { ...token, data: user };
       }
-      if (session) {
-        token.user = session.user;
+
+      if (Date.now() < token.data.validity.validUntil * 1000) {
+        return token;
       }
-      return token;
+
+      if (Date.now() < token.data.validity.refreshUntil * 1000) {
+        const refreshOptions = {
+          method: "POST",
+          url: `${API_URL}/api/auth/refresh`,
+          params: {
+            refresh_token: token.data.tokens.refresh,
+          },
+        };
+        const response = await axios(refreshOptions);
+        const newToken: BackendAccessJWT = response.data.payload;
+        const { exp }: DecodedJWT = jwtDecode(newToken.access);
+        token.data.validity.validUntil = exp;
+        token.data.tokens.access = newToken.access;
+        return token;
+      }
+
+      return { ...token, error: "RefreshTokenExpired" } as JWT;
     },
     session: async ({ session, token }) => {
-      if (token) {
-        session.user = token.user as any;
-      }
-      return session;
+      const data = token.data;
+
+      return {
+        ...session,
+        user: data.user,
+        accessToken: data.tokens.access,
+        validity: data.validity,
+        error: token.error,
+      };
     },
   },
-  trustHost: true,
   pages: {
-    signIn: "/login",
+    signIn: "/",
   },
+  trustHost: true,
 });

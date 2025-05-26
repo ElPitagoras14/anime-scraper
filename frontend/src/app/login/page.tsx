@@ -1,172 +1,137 @@
 "use client";
 
+import { TelescopeIcon } from "lucide-react";
+import Link from "next/link";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
-import { TypographyH2, TypographyH4 } from "@/components/ui/typography";
-import { IconLocationStar } from "@tabler/icons-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/lib/interfaces";
 import { Form } from "@/components/ui/form";
-import FieldLabel from "@/components/field-label";
-import Link from "next/link";
-import { useToast } from "@/components/ui/use-toast";
-import { useRouter } from "next/navigation";
+import { SiGithub, SiBuymeacoffee } from "@icons-pack/react-simple-icons";
+import CustomField from "@/components/form-fields/custom-field";
+import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Icons } from "@/components/ui/icons";
-import { KeyboardEventHandler, useState } from "react";
-import SocialMediaInfo from "@/components/social-media-info";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
-const fields = [
+const fields: FormField[] = [
   {
     name: "username",
-    initValue: "",
     label: "Username",
-    placeholder: "funnybunny",
+    placeholder: "shadcn",
     type: "text",
-    validation: z
-      .string()
-      .min(1, { message: "Username is required" })
-      .regex(/^[a-zA-Z]+[a-zA-Z0-9_]*$/, { message: "Invalid username" }),
+    validation: z.string().min(2, {
+      message: "Username must be at least 2 characters long",
+    }),
   },
   {
     name: "password",
-    initValue: "",
     label: "Password",
-    placeholder: "**********",
+    placeholder: "********",
     type: "password",
-    validation: z
-      .string()
-      .min(1, { message: "Password is required" })
-      .max(32, { message: "Password is too long" }),
+    validation: z.string().min(2, {
+      message: "Password must be at least 2 characters long",
+    }),
   },
 ];
 
-const validationSchema = z.object(
+const formSchema = z.object(
   fields.reduce((acc, field) => {
     acc[field.name] = field.validation;
     return acc;
-  }, {} as any)
+  }, {} as Record<string, z.ZodType>)
 );
 
-const initialValues = fields.reduce((acc, field) => {
-  acc[field.name] = field.initValue;
-  return acc;
-}, {} as any);
+export default function Login() {
+  const [isLoading, setIsloading] = useState<boolean>(false);
 
-export default function Register() {
-  const { toast } = useToast();
   const router = useRouter();
 
-  const form = useForm<z.infer<typeof validationSchema>>({
-    resolver: zodResolver(validationSchema),
-    defaultValues: initialValues,
-    mode: "onChange",
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      username: "admin",
+      password: "admin",
+    },
   });
 
-  const [isLoading, setIsLoading] = useState(false);
-
   const onSubmit = form.handleSubmit(
-    async (data: z.infer<typeof validationSchema>) => {
+    async (values: z.infer<typeof formSchema>) => {
       try {
-        setIsLoading(true);
+        setIsloading(true);
         const response = await signIn("credentials", {
-          username: data.username,
-          password: data.password,
+          username: values.username,
+          password: values.password,
           redirect: false,
         });
 
-        if (response && !response.error) {
-          router.push("/");
-        } else {
-          if (response!.error === "Configuration") {
-            toast({
-              title: "Error logging in",
-              description: "Please try again later",
-            });
-          } else if (response!.error === "CredentialsSignin") {
-            toast({
-              title: "Error logging in",
-              description: "Invalid username or password",
-            });
+        if (response?.error) {
+          if (response.error === "CredentialsSignin") {
+            toast.error("Invalid username or password");
           }
+        } else {
+          router.push("/home");
         }
-      } catch (error: any) {
-        if (!error.response) {
-          toast({
-            title: "Error logging in",
-            description: "Please try again later",
-          });
-        }
+      } catch (error) {
+        console.log(error);
       } finally {
-        setIsLoading(false);
+        setIsloading(false);
       }
     }
   );
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      onSubmit();
-    }
-  };
-
   return (
-    <div className="flex min-w-full min-h-svh">
-      <div className="bg-secondary w-[50%] hidden lg:block">
-        <div className="flex flex-col justify-between min-h-svh px-8 py-8">
-          <div className="flex space-x-4 items-center">
-            <IconLocationStar className="w-8 h-8" />
-            <TypographyH4>Anime Scraper</TypographyH4>
-          </div>
-          <div className="flex space-x-4">
-            <SocialMediaInfo />
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-col items-center justify-between lg:justify-center w-[100%] lg:w-[50%] pt-8 pb-6">
-        <div className="flex space-x-4 items-center w-[100%] px-6 lg:hidden">
-          <IconLocationStar className="w-8 h-8" />
-          <TypographyH4>Anime Scraper</TypographyH4>
-        </div>
-        <div className="flex flex-col items-center justify-center w-[70%]">
-          <TypographyH2>Login</TypographyH2>
-          <p className="text-xs md:text-base text-muted-foreground mb-4">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-primary">
-              Register
-            </Link>
-          </p>
-          <Form {...form}>
-            <form
-              className="flex flex-col space-y-2 w-[100%] lg:w-[20vw] justify-center"
-              onKeyDown={handleKeyDown as KeyboardEventHandler}
-            >
+    <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+      <div className="w-full max-w-sm">
+        <Form {...form}>
+          <form className="flex flex-col gap-6 px-4">
+            <div className="flex flex-col items-center gap-2">
+              <TelescopeIcon className="w-8 h-8" />
+              <h1 className="text-3xl font-bold">Welcome to Ani Seek</h1>
+              <span className="text-xl text-muted-foreground">
+                A simple way to scrap anime
+              </span>
+              <div className="text-center text-sm text-muted-foreground">
+                Don&apos;t have an account?{" "}
+                <Link
+                  href="/register"
+                  className="underline underline-offset-4 text-primary"
+                >
+                  Sign up
+                </Link>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
               {fields.map((field) => (
-                <FieldLabel
-                  key={field.name}
-                  fieldInfo={field}
-                  formContext={form}
-                />
+                <CustomField key={field.name} form={form} fieldInfo={field} />
               ))}
-              <div className="py-2"></div>
-              <Button
-                type="button"
-                size="lg"
-                variant="secondary"
-                onClick={onSubmit}
-                disabled={isLoading || !form.formState.isDirty}
+            </div>
+            <Button type="button" className="cursor-pointer" onClick={onSubmit}>
+              Login{" "}
+              {isLoading && <Icons.spinner className="animate-spin size-5" />}
+            </Button>
+            <div className="flex justify-center gap-4">
+              <Link
+                href="https://github.com/ElPitagoras14"
+                target="_blank"
+                className="flex items-center gap-2"
               >
-                {isLoading ? (
-                  <Icons.spinner className="h-6 w-6 animate-spin" />
-                ) : (
-                  "Login"
-                )}
-              </Button>
-            </form>
-          </Form>
-        </div>
-        <div className="flex space-x-4 w-[100%] justify-center lg:hidden">
-          <SocialMediaInfo />
-        </div>
+                <SiGithub />
+                <span>Github</span>
+              </Link>
+              <Link
+                href="https://buymeacoffee.com/jhonyg"
+                target="_blank"
+                className="flex items-center gap-2"
+              >
+                <SiBuymeacoffee />
+                <span>Support it</span>
+              </Link>
+            </div>
+          </form>
+        </Form>
       </div>
     </div>
   );

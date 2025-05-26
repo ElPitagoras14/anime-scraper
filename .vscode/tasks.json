@@ -17,24 +17,9 @@
       "problemMatcher": []
     },
     {
-      "label": "Add workers",
-      "type": "shell",
-      "windows": {
-        "command": "${workspaceFolder}/scripts/add-workers.bat"
-      },
-      "linux": {
-        "command": "${workspaceFolder}/scripts/setup-dev.sh"
-      },
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
-      "problemMatcher": []
-    },
-    {
       "label": "Run Backend",
       "type": "shell",
-      "command": "python",
+      "command": "${workspaceFolder}/backend/venv/Scripts/python",
       "args": ["main.py"],
       "options": {
         "cwd": "${workspaceFolder}/backend/src"
@@ -49,10 +34,28 @@
       }
     },
     {
+      "label": "Run Celery",
+      "type": "shell",
+      "command": "${workspaceFolder}/queue/venv/Scripts/python",
+      "args": ["main.py"],
+      "options": {
+        "cwd": "${workspaceFolder}/queues/src"
+      }
+    },
+    {
+      "label": "Run Flower",
+      "type": "shell",
+      "command": "${workspaceFolder}/queue/venv/Scripts/celery",
+      "args": ["-A", "main", "flower", "--port=5555"],
+      "options": {
+        "cwd": "${workspaceFolder}/queues/src"
+      }
+    },
+    {
       "label": "Deploy with docker-compose",
       "type": "shell",
       "command": "docker-compose",
       "args": ["up", "-d", "--build"]
-    },
+    }
   ]
 }

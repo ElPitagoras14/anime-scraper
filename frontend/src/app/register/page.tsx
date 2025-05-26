@@ -1,206 +1,171 @@
 "use client";
 
+import { TelescopeIcon } from "lucide-react";
+import Link from "next/link";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
-import { TypographyH2, TypographyH4 } from "@/components/ui/typography";
-import { IconLocationStar } from "@tabler/icons-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/lib/interfaces";
 import { Form } from "@/components/ui/form";
-import FieldLabel from "@/components/field-label";
-import Link from "next/link";
-import axios from "axios";
-import { useToast } from "@/components/ui/use-toast";
+import { SiGithub, SiBuymeacoffee } from "@icons-pack/react-simple-icons";
+import CustomField from "@/components/form-fields/custom-field";
 import { Icons } from "@/components/ui/icons";
-import { useState } from "react";
-import SocialMediaInfo from "@/components/social-media-info";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { AxiosError } from "axios";
+import apiClient from "@/lib/api-client";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-const fields = [
+const fields: FormField[] = [
   {
     name: "username",
-    initValue: "",
     label: "Username",
-    placeholder: "funnybunny",
+    placeholder: "shadcn",
     type: "text",
-    validation: z
-      .string()
-      .min(4, { message: "Username is too short" })
-      .max(50, { message: "Username is too long" })
-      .regex(/^[a-zA-Z]+[a-zA-Z0-9_]*$/, { message: "Invalid username" }),
+    validation: z.string().min(2, {
+      message: "Username must be at least 2 characters long",
+    }),
   },
   {
     name: "password",
-    initValue: "",
     label: "Password",
-    placeholder: "**********",
+    placeholder: "********",
     type: "password",
-    validation: z
-      .string()
-      .min(6, { message: "Password is too short" })
-      .max(32, { message: "Password is too long" }),
+    validation: z.string().min(2, {
+      message: "Password must be at least 2 characters long",
+    }),
   },
   {
     name: "confirmPassword",
-    initValue: "",
     label: "Confirm Password",
-    placeholder: "**********",
+    placeholder: "********",
     type: "password",
-    validation: z
-      .string()
-      .min(6, { message: "Password is too short" })
-      .max(32, { message: "Password is too long" }),
+    validation: z.string().min(2, {
+      message: "Password must be at least 2 characters long",
+    }),
   },
 ];
 
-const validationSchema = z
+const formSchema = z
   .object(
     fields.reduce((acc, field) => {
       acc[field.name] = field.validation;
       return acc;
-    }, {} as any)
+    }, {} as Record<string, z.ZodType>)
   )
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: "Passwords do not match",
     path: ["confirmPassword"],
   });
 
-const initialValues = fields.reduce((acc, field) => {
-  acc[field.name] = field.initValue;
-  return acc;
-}, {} as any);
-
-const createAccount = async (data: z.infer<typeof validationSchema>) => {
-  const avatarsOptions = {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    url: `/api/users/avatars`,
-  };
-  const avatarsResponse = await axios(avatarsOptions);
-
-  const { data: avatars } = avatarsResponse;
-  const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
-
-  const registerOptions = {
+const createUser = async (values: z.infer<typeof formSchema>) => {
+  const options = {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+    url: "/auth/register",
+    data: {
+      username: values.username,
+      password: values.password,
     },
-    url: `${BACKEND_URL}/api/v2/auth/register`,
-    data: { ...data, avatar: randomAvatar },
   };
 
-  await axios(registerOptions);
+  return await apiClient(options);
 };
 
-export default function Register() {
-  const { toast } = useToast();
-  const [isLoadingRegister, setIsLoadingRegister] = useState(false);
+export default function Login() {
+  const router = useRouter();
 
-  const form = useForm<z.infer<typeof validationSchema>>({
-    resolver: zodResolver(validationSchema),
-    defaultValues: initialValues,
-    mode: "onChange",
+  const mutation = useMutation({
+    mutationFn: createUser,
+    onSuccess: () => {
+      toast.success("User created successfully");
+      router.push("/login");
+    },
+    onError: (error: AxiosError) => {
+      let message = error.message;
+
+      if (error.isAxiosError) {
+        const axiosError = error as AxiosError<{ message: string }>;
+        message = axiosError.response?.data?.message || axiosError.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+
+      toast.error(message);
+    },
+  });
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      username: "admin",
+      password: "admin",
+      confirmPassword: "admin",
+    },
   });
 
   const onSubmit = form.handleSubmit(
-    async (data: z.infer<typeof validationSchema>) => {
+    async (values: z.infer<typeof formSchema>) => {
       try {
-        setIsLoadingRegister(true);
-        await createAccount(data);
-        form.reset();
-        toast({
-          title: "Account created",
-          description:
-            "You have successfully created an account, please contact an admin to activate it",
-        });
-      } catch (error: any) {
-        if (!error.response) {
-          toast({
-            title: "Error",
-            description: "Something went wrong, please try again later",
-          });
-        }
-
-        const { response: { status = 500 } = {} } = error;
-
-        if (status === 409) {
-          toast({
-            title: "Conflict",
-            description: "Username already exists",
-          });
-        }
-
-        if (status === 500) {
-          toast({
-            title: "Internal server error",
-            description: "Please try again later",
-          });
-        }
-      } finally {
-        setIsLoadingRegister(false);
+        mutation.mutate(values);
+      } catch (error) {
+        console.log(error);
       }
     }
   );
 
   return (
-    <div className="flex min-w-full min-h-svh">
-      <div className="bg-secondary w-[50%] hidden lg:block">
-        <div className="flex flex-col justify-between min-h-svh px-8 py-8">
-          <div className="flex space-x-4 items-center">
-            <IconLocationStar className="w-8 h-8" />
-            <TypographyH4>Anime Scraper</TypographyH4>
-          </div>
-          <div className="flex space-x-4">
-            <SocialMediaInfo />
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-col items-center justify-between lg:justify-center w-[100%] lg:w-[50%] pt-8 pb-6">
-        <div className="flex space-x-4 items-center w-[100%] px-6 lg:hidden">
-          <IconLocationStar className="w-8 h-8" />
-          <TypographyH4>Anime Scraper</TypographyH4>
-        </div>
-        <div className="flex flex-col items-center justify-center w-[70%]">
-          <TypographyH2>Create an account</TypographyH2>
-          <p className="text-xs md:text-base text-muted-foreground mb-4">
-            Already have an account?{" "}
-            <Link href="/login" className="text-primary">
-              Login
-            </Link>
-          </p>
-          <Form {...form}>
-            <form className="flex flex-col space-y-2 w-[100%] lg:w-[20vw] justify-center">
+    <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+      <div className="w-full max-w-sm">
+        <Form {...form}>
+          <form className="flex flex-col gap-6 px-4">
+            <div className="flex flex-col items-center gap-2">
+              <TelescopeIcon className="w-8 h-8" />
+              <h1 className="text-3xl font-bold">Join to Ani Seek</h1>
+              <span className="text-xl text-muted-foreground">
+                Create an account and start exploring
+              </span>
+              <div className="text-center text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link
+                  href="/login"
+                  className="underline underline-offset-4 text-primary"
+                >
+                  Sign in
+                </Link>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
               {fields.map((field) => (
-                <FieldLabel
-                  key={field.name}
-                  fieldInfo={field}
-                  formContext={form}
-                />
+                <CustomField key={field.name} form={form} fieldInfo={field} />
               ))}
-              <div className="py-2"></div>
-              <Button
-                type="button"
-                size="lg"
-                variant="secondary"
-                disabled={isLoadingRegister || !form.formState.isDirty}
-                onClick={onSubmit}
+            </div>
+            <Button type="button" className="cursor-pointer" onClick={onSubmit}>
+              Register{" "}
+              {mutation.isPending && (
+                <Icons.spinner className="animate-spin size-5" />
+              )}
+            </Button>
+            <div className="flex justify-center gap-4">
+              <Link
+                href="https://github.com/ElPitagoras14"
+                target="_blank"
+                className="flex items-center gap-2"
               >
-                {isLoadingRegister ? (
-                  <Icons.spinner className="h-6 w-6 animate-spin" />
-                ) : (
-                  "Register"
-                )}
-              </Button>
-            </form>
-          </Form>
-        </div>
-        <div className="flex space-x-4 w-[100%] justify-center lg:hidden">
-          <SocialMediaInfo />
-        </div>
+                <SiGithub />
+                <span>Github</span>
+              </Link>
+              <Link
+                href="https://buymeacoffee.com/jhonyg"
+                target="_blank"
+                className="flex items-center gap-2"
+              >
+                <SiBuymeacoffee />
+                <span>Support it</span>
+              </Link>
+            </div>
+          </form>
+        </Form>
       </div>
     </div>
   );

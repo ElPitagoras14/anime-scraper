@@ -1,21 +1,23 @@
-import time
 from fastapi import APIRouter, Request, Response
 from loguru import logger
 
+from utils.exceptions import (
+    InternalServerErrorException,
+    NotFoundException,
+    ConflictException,
+)
 from utils.responses import (
+    APIResponse,
     ConflictResponse,
     InternalServerErrorResponse,
     SuccessResponse,
 )
 
-from .service import login_controller, register_controller
-from .responses import TokenOut
-from .schemas import AuthInfo
-from .config import auth_settings
+from .service import login_controller, refresh_controller, register_controller
+from .responses import TokenOut, AccessTokenOut
+from .schemas import LoginInfo, CreateInfo
 
 auth_router = APIRouter()
-
-EXPIRE_MINUTES = auth_settings.EXPIRE_MINUTES
 
 
 @auth_router.post(
@@ -26,40 +28,31 @@ EXPIRE_MINUTES = auth_settings.EXPIRE_MINUTES
         500: {"model": InternalServerErrorResponse},
     },
 )
-async def login(request: Request, response: Response, login_input: AuthInfo):
-    start_time = time.time()
-    request_id = request.state.request_id
+async def login(login_info: LoginInfo, request: Request, response: Response):
+    request.state.func = "login"
     try:
-        logger.info(f"Logging in {login_input.username}")
-        success, value = login_controller(
-            login_input.username, login_input.password
+        logger.info(f"Logging in {login_info.username}")
+        status, data = login_controller(
+            login_info.username, login_info.password, request.state.request_id
         )
-        process_time = time.time() - start_time
 
-        if not success:
-            logger.warning(f"Error logging in: {value}")
-            response.status_code = 409
-            return ConflictResponse(
-                request_id=request_id,
-                process_time=process_time,
-                message=value,
-                func="login",
-            )
+        response.status_code = status
 
-        logger.info(f"Logged in in {process_time:.2f} seconds")
-        return TokenOut(
-            request_id=request_id,
-            process_time=process_time,
+        response_data = APIResponse(
+            success=True,
+            message="User logged in successfully",
             func="login",
-            message="User logged in",
-            payload=value,
+            payload=data,
         )
+
+        return response_data
     except Exception as e:
-        logger.error(f"Error logging in: {e}")
-        response.status_code = 500
-        return InternalServerErrorResponse(
-            request_id=request_id, message=str(e), func="login"
-        )
+        logger.error(f"Error logging in {login_info.username}: {e}")
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
+            )
+        raise
 
 
 @auth_router.post(
@@ -71,38 +64,70 @@ async def login(request: Request, response: Response, login_input: AuthInfo):
     },
 )
 async def register(
-    register_info: AuthInfo, request: Request, response: Response
+    request: Request,
+    response: Response,
+    register_info: CreateInfo,
 ):
-    start_time = time.time()
-    request_id = request.state.request_id
+    request.state.func = "register"
     try:
         logger.info(f"Registering {register_info.username}")
-        success, value = register_controller(
+        status, data = register_controller(
             register_info.username,
             register_info.password,
-            register_info.avatar,
+            request.state.request_id,
         )
-        process_time = time.time() - start_time
 
-        if not success:
-            logger.warning(f"Error registering: {value}")
-            response.status_code = 409
-            return ConflictResponse(
-                request_id=request_id,
-                process_time=process_time,
-                message=value,
-                func="register",
-            )
+        response.status_code = status
 
-        logger.info(f"Registered in {process_time:.2f} seconds")
-        return SuccessResponse(
-            request_id=request_id,
-            process_time=process_time,
+        response_data = APIResponse(
+            success=True,
+            message="User registered successfully",
             func="register",
-            message="User registered",
+            payload=data,
         )
+
+        return response_data
     except Exception as e:
-        logger.error(f"Error registering: {e}")
-        return InternalServerErrorResponse(
-            request_id=request_id, message=str(e), func="register"
+        logger.error(f"Error registering {register_info.username}: {e}")
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
+            )
+        raise
+
+
+@auth_router.post(
+    "/refresh",
+    responses={
+        200: {"model": AccessTokenOut},
+        409: {"model": ConflictResponse},
+        500: {"model": InternalServerErrorResponse},
+    },
+)
+async def refresh_token(
+    refresh_token: str, response: Response, request: Request
+):
+    request.state.func = "refresh_token"
+    try:
+        logger.info("Refreshing token")
+        status, data = refresh_controller(
+            refresh_token, request.state.request_id
         )
+
+        response.status_code = status
+
+        response_data = APIResponse(
+            success=True,
+            message="Token refreshed successfully",
+            func="refresh_token",
+            payload=data,
+        )
+
+        return response_data
+    except Exception as e:
+        logger.error(f"Error refreshing token: {e}")
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
+            )
+        raise

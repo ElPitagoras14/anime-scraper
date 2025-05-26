@@ -1,40 +1,42 @@
 import { auth } from "@/auth";
+import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 
-export default auth((req) => {
-  if (
-    req.auth &&
-    (req.nextUrl.pathname === "/login" || req.nextUrl.pathname === "/register")
-  ) {
-    const newUrl = new URL("/", req.nextUrl.origin);
-    return NextResponse.redirect(newUrl);
-  }
+const AUTH_SECRET = "secret";
 
-  if (req.auth) {
+const unprotectedPaths = ["/login", "/register"];
+
+export default auth(async (req) => {
+  const token = await getToken({
+    req,
+    secret: AUTH_SECRET,
+  });
+  const baseUrl = req.nextUrl.origin;
+
+
+  if (unprotectedPaths.includes(req.nextUrl.pathname)) {
     return NextResponse.next();
   }
 
-  if (
-    req.nextUrl.pathname === "/login" ||
-    req.nextUrl.pathname === "/register"
-  ) {
-    return NextResponse.next();
+  if (!token) {
+    return NextResponse.redirect(`${baseUrl}/login`);
   }
 
-  const newUrl = new URL("/login", req.nextUrl.origin);
-  return NextResponse.redirect(newUrl);
+  if (token && Date.now() >= token.data.validity.refreshUntil * 1000) {
+    console.log("token expired");
+    // Redirect to the login page
+    const response = NextResponse.redirect(`${baseUrl}/login`);
+    // Clear the session cookies
+    response.cookies.set("next-auth.session-token", "", { maxAge: 0 });
+    response.cookies.set("next-auth.csrf-token", "", { maxAge: 0 });
+
+    return response;
+  }
+
+  // If authenticated, continue with the request
+  return NextResponse.next();
 });
 
 export const config = {
-  matcher: [
-    "/login",
-    "/register",
-    "/",
-    "/calendar",
-    "/search",
-    "/downloads",
-    "/info/:path*",
-    "/saved",
-    "/settings",
-  ],
+  matcher: ["/((?!api|_next/static|_next/image|.*\\.png$).*)"],
 };

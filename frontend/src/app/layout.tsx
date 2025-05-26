@@ -1,47 +1,52 @@
-import type { Metadata } from "next";
-import { Nunito_Sans as FontSans } from "next/font/google";
-import { cn } from "@/lib/utils";
-import { ThemeProvider } from "@/providers/theme-provider";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
+import { ThemeProvider } from "@/providers/theme-provider";
+import QueryProvider from "@/providers/query-provider";
+import { Toaster } from "@/components/ui/sonner";
 
-const fontSans = FontSans({
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  variable: "--font-sans",
-  weight: "400",
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Anime Scraper",
-  description: "Scraper for anime websites",
+  title: "Ani Seek",
+  description: "Anime search engine",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          fontSans.variable
-        )}
-      >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
+    <>
+      <html lang="en">
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
         >
-          <SessionProvider>
-            {children}
-          </SessionProvider>
-          <Toaster></Toaster>
-        </ThemeProvider>
-      </body>
-    </html>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <QueryProvider>
+              <SessionProvider>
+                {children}
+                <Toaster />
+              </SessionProvider>
+            </QueryProvider>
+          </ThemeProvider>
+        </body>
+      </html>
+    </>
   );
 }

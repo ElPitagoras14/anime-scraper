@@ -3,10 +3,18 @@ from pydantic import BaseModel
 from utils.responses import SuccessResponse
 
 
-class Token(BaseModel):
-    token: str
-    type: str
+class Tokens(BaseModel):
+    access: str
+    refresh: str
 
 
 class TokenOut(SuccessResponse):
-    payload: Token | None
+    payload: Tokens | None
+
+
+class AccessToken(BaseModel):
+    access: str
+
+
+class AccessTokenOut(SuccessResponse):
+    payload: AccessToken | None
