@@ -1,7 +1,11 @@
 from pydantic import BaseModel
 
 
-class AuthInfo(BaseModel):
+class LoginInfo(BaseModel):
     username: str
     password: str
-    avatar: str | None = None
+
+
+class CreateInfo(BaseModel):
+    username: str
+    password: str

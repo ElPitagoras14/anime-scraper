@@ -1,20 +1,18 @@
+from datetime import datetime
+import uuid
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-from datetime import datetime
-
-from ..auth import Token
-
-from utils.responses import SuccessResponse
 
 
 class User(BaseModel):
-    id: str
+    id: uuid.UUID
     username: str
-    avatar: str | None
-    is_admin: bool
+    avatar_url: str | None = None
+    avatar_label: str | None = None
+    role: str
     is_active: bool
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -28,18 +26,20 @@ class UserList(BaseModel):
     total: int
 
 
-class UserToken(BaseModel):
-    token: Token
-    user: User
-
-
-class UserOut(SuccessResponse):
-    payload: User | None
-
-
-class UserListOut(SuccessResponse):
+class UserListOut(BaseModel):
     payload: UserList | None
 
 
-class UserTokenOut(SuccessResponse):
-    payload: UserToken | None
+class Avatar(BaseModel):
+    id: int
+    label: str
+    url: str
+
+
+class AvatarList(BaseModel):
+    items: list[Avatar]
+    total: int
+
+
+class AvatarListOut(BaseModel):
+    payload: AvatarList | None

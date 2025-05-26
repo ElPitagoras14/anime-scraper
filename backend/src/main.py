@@ -1,27 +1,26 @@
-import uuid
 import uvicorn
-from jose import JWTError, jwt
-from loguru import logger
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from config import general_settings
-from databases.postgres.client import DatabaseSession
-from databases.postgres.models import User
-from routes import router
-from log import configure_logs
+from loguru import logger
 from contextlib import asynccontextmanager
+
+from databases.postgres import DatabaseSession, User
+from packages.auth import get_hash
+from utils.exception_handlers import (
+    custom_http_exception_handler,
+    general_exception_handler,
+)
+from utils.exceptions import CustomHTTPException
+from log import configure_logs
+from config import general_settings
+from routes import router
 from watchgod import run_process
+from middleware import add_logging_and_timing
 
-from packages.auth import get_password_hash
-
-
-HOST = general_settings.API_HOST
 PORT = general_settings.API_PORT
-APP_NAME = general_settings.APP_NAME
-SECRET_KEY = general_settings.AUTH_SECRET_KEY
-ALGORITHM = general_settings.AUTH_ALGORITHM
-APP_ADMIN_USER = general_settings.APP_ADMIN_USER
-APP_ADMIN_PASS = general_settings.APP_ADMIN_PASS
+ADMIN_USER = general_settings.ADMIN_USER
+ADMIN_PASS = general_settings.ADMIN_PASS
+
 
 configure_logs()
 
@@ -29,32 +28,37 @@ configure_logs()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     with DatabaseSession() as db:
-        root_user = db.query(User).filter(User.is_admin).first()
+        root_user = db.query(User).filter(User.role_id == 1).first()
         if not root_user:
-            hashed_password = get_password_hash(APP_ADMIN_PASS)
+            logger.info("Admin user not found, creating...")
+            hashed_password = get_hash(ADMIN_PASS)
             root_user = User(
-                username=APP_ADMIN_USER,
+                username=ADMIN_USER,
                 password=hashed_password,
-                is_admin=True,
+                role_id=1,
                 is_active=True,
-                avatar="penguin.png",
             )
             db.add(root_user)
             db.commit()
             db.refresh(root_user)
-    try:
-        yield
-    finally:
-        logger.remove("request_id")
-        logger.remove("user")
+            logger.success(f"Admin user '{ADMIN_USER}' created successfully")
 
+    logger.info("Application starting up...")
+    yield
+
+    logger.info("Application shutting down...")
+
+
+version = "1.0.0"
 
 app = FastAPI(
-    title="Anime Scraper API",
-    description="Scraper for anime data and download links.",
-    version="2.0.0",
+    title="Ani Seek API",
+    description="API for scraped anime data from various sources.",
+    version=version,
     lifespan=lifespan,
 )
+
+app.middleware("http")(add_logging_and_timing)
 
 app.add_middleware(
     CORSMiddleware,
@@ -64,36 +68,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_exception_handler(CustomHTTPException, custom_http_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
 
-@app.middleware("http")
-async def add_logging_context(request: Request, call_next):
-    request_id = str(uuid.uuid4())
-    request.state.request_id = request_id
-    user_id = None
-    username = None
-    token = request.headers.get("Authorization")
-    if token:
-        token = token.split(" ")[-1]
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            user_id = payload.get("sub")
-            username = payload.get("username")
-        except JWTError:
-            user_id = None
-            username = None
-    with logger.contextualize(
-        request_id=request_id, user_id=user_id, username=username
-    ):
-        response = await call_next(request)
-
-    return response
+app.include_router(router, prefix="/api")
 
 
-app.include_router(router, prefix="/api/v2")
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy", "version": version, "service": "Ani Seek API"}
 
 
 def start():
-    uvicorn.run(app=APP_NAME, host=HOST, port=PORT, reload=False)
+    logger.info(f"Server starting on port {PORT}")
+
+    uvicorn.run(app="main:app", host="0.0.0.0", port=PORT, reload=False)
 
 
 if __name__ == "__main__":

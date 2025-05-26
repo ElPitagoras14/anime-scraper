@@ -1,56 +1,61 @@
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Request, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 
-
+from databases.postgres import DatabaseSession, User
 from .config import auth_settings
 
 SECRET_KEY = auth_settings.SECRET_KEY
 ALGORITHM = auth_settings.ALGORITHM
-EXPIRE_MINUTES = auth_settings.EXPIRE_MINUTES
 
 
 class JWTBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):
         super().__init__(auto_error=auto_error)
 
-    async def __call__(self, request: Request) -> dict:
-        credentials: HTTPAuthorizationCredentials = await super().__call__(
-            request
-        )
-        if not credentials:
-            raise HTTPException(
-                status_code=401, detail="Authorization header missing"
+    async def __call__(self, request: Request) -> User:
+        with DatabaseSession() as db:
+            credentials: HTTPAuthorizationCredentials = await super().__call__(
+                request
             )
-        if credentials.scheme != "Bearer":
-            raise HTTPException(
-                status_code=401, detail="Invalid authentication scheme"
-            )
-        return self.verify_jwt(credentials.credentials)
+            if credentials and credentials.scheme.lower() == "bearer":
+                try:
+                    payload = jwt.decode(
+                        credentials.credentials,
+                        SECRET_KEY,
+                        algorithms=[ALGORITHM],
+                    )
+                    user_id = payload.get("id")
+                    if not user_id:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Invalid token",
+                        )
 
-    def verify_jwt(self, token: str) -> dict:
-        try:
-            user = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            return user
-        except JWTError:
+                    user = db.query(User).filter(User.id == user_id).first()
+                    if not user:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User not found",
+                        )
+
+                    return {
+                        "id": str(user.id),
+                        "username": user.username,
+                        "isActive": user.is_active,
+                        "role": user.role,
+                    }
+
+                except JWTError:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid token",
+                    )
+
             raise HTTPException(
-                status_code=401, detail="Sesión inválida o expirada."
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="No valid Bearer token provided",
             )
 
 
 auth_scheme = JWTBearer()
-
-
-async def get_current_user(payload: dict = Depends(auth_scheme)):
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={
-                "message": "Could not validate credentials",
-                "user_id": user_id,
-                "error_code": "invalid_token",
-            },
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return payload

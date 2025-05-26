@@ -1,419 +1,110 @@
-import time
-
 from fastapi import APIRouter, Depends, Request, Response
 from loguru import logger
 
-from utils.responses import (
-    InternalServerErrorResponse,
-    SuccessResponse,
-    ConflictResponse,
-    NotFoundResponse,
+from packages.auth import auth_scheme
+from utils.exceptions import (
+    InternalServerErrorException,
+    NotFoundException,
+    ConflictException,
 )
-
-from ..auth import get_current_user
-
+from utils.responses import APIResponse
 from .service import (
-    change_user_avatar_controller,
-    change_user_status_controller,
-    create_user_controller,
-    delete_user_controller,
-    get_user_controller,
-    get_all_users_controller,
-    update_user_info_controller,
+    get_avatars_controller,
+    get_users_controller,
+    update_user_controller,
 )
-from .responses import UserListOut, UserOut, UserTokenOut
-from .schemas import NewUser, UpdateStatus, UpdateUser
+from .schemas import UserInfo
 
 users_router = APIRouter()
 
 
-@users_router.get(
-    "",
-    responses={
-        200: {"model": UserListOut},
-        500: {"model": InternalServerErrorResponse},
-    },
-)
-async def get_all_users(
+@users_router.get("")
+async def get_users(
     request: Request,
     response: Response,
-    sort_by: str = None,
-    desc: bool = None,
-    page: int = 0,
-    size: int = 10,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(auth_scheme),
 ):
-    start_time = time.time()
-    request_id = request.state.request_id
+    request.state.func = "get_users"
     try:
         logger.info("Getting users")
-        if not current_user["is_admin"]:
-            response.status_code = 409
-            return ConflictResponse(
-                request_id=request_id,
-                func="change_user_status",
-                message="Unauthorized",
-            )
-        users = get_all_users_controller(
-            sort_by, desc, page, size, current_user["sub"]
-        )
-        process_time = time.time() - start_time
-        logger.info(f"Got users in {process_time:.2f} seconds")
-        return UserListOut(
-            request_id=request_id,
-            process_time=process_time,
-            func="get_all_users",
+        status, data = await get_users_controller(current_user["id"])
+
+        response.status_code = status
+
+        response_data = APIResponse(
+            success=True,
             message="Users retrieved",
-            payload=users,
+            func="get_users",
+            payload=data,
         )
+
+        return response_data
     except Exception as e:
         logger.error(f"Error getting users: {e}")
-        response.status_code = 500
-        return InternalServerErrorResponse(
-            request_id=request_id, message=str(e), func="get_all_users"
-        )
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
+            )
+        raise
 
 
-@users_router.get(
-    "/info/{user_id}",
-    responses={
-        200: {"model": UserOut},
-        404: {"model": NotFoundResponse},
-        500: {"model": InternalServerErrorResponse},
-    },
-)
-async def get_user(
+@users_router.put("")
+async def update_user(
+    user_info: UserInfo,
     request: Request,
     response: Response,
-    user_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(auth_scheme),
 ):
-    start_time = time.time()
-    request_id = request.state.request_id
+    request.state.func = "update_user"
     try:
-        logger.info(f"Getting user {user_id}")
-        user = get_user_controller(user_id)
-        process_time = time.time() - start_time
-        if not user:
-            response.status_code = 404
-            return NotFoundResponse(
-                request_id=request_id,
-                process_time=process_time,
-                func="get_user",
-                message="User not found",
-            )
-        logger.info(f"Got user {user_id} in {process_time:.2f} seconds")
-        return UserOut(
-            request_id=request_id,
-            process_time=process_time,
-            func="get_user",
-            message="User retrieved",
-            payload=user,
+        logger.info("Updating user")
+        status, _ = await update_user_controller(
+            user_info, current_user["id"], request.state.request_id
         )
+
+        response.status_code = status
+
+        response_data = APIResponse(
+            success=True,
+            message="User updated",
+            func="update_user",
+        )
+
+        return response_data
     except Exception as e:
-        logger.error(f"Error getting user {user_id}: {e}")
-        response.status_code = 500
-        return InternalServerErrorResponse(
-            request_id=request_id, message=str(e), func="get_user"
-        )
+        logger.error(f"Error updating user: {e}")
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
+            )
+        raise
 
 
-@users_router.get(
-    "/me",
-    responses={
-        200: {"model": UserOut},
-        500: {"model": InternalServerErrorResponse},
-    },
-)
-async def get_current_user_info(
+@users_router.get("/avatars")
+async def get_avatars(
     request: Request,
     response: Response,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(auth_scheme),
 ):
-    start_time = time.time()
-    request_id = request.state.request_id
+    request.state.func = "get_avatars"
     try:
-        logger.info("Getting current user")
-        user = get_user_controller(current_user["sub"])
-        process_time = time.time() - start_time
-        logger.info(f"Got current user in {process_time:.2f} seconds")
-        return UserOut(
-            request_id=request_id,
-            process_time=process_time,
-            func="get_current_user_info",
-            message="User retrieved",
-            payload=user,
+        logger.info("Getting avatars")
+        status, data = await get_avatars_controller()
+
+        response.status_code = status
+
+        response_data = APIResponse(
+            success=True,
+            message="Avatars retrieved",
+            func="get_avatars",
+            payload=data,
         )
+
+        return response_data
     except Exception as e:
-        logger.error(f"Error getting current user: {e}")
-        response.status_code = 500
-        return InternalServerErrorResponse(
-            request_id=request_id, message=str(e), func="get_current_user_info"
-        )
-
-
-@users_router.post(
-    "",
-    responses={
-        200: {"model": UserOut},
-        409: {"model": ConflictResponse},
-        500: {"model": InternalServerErrorResponse},
-    },
-)
-async def create_user(
-    new_user: NewUser,
-    request: Request,
-    response: Response,
-    current_user: dict = Depends(get_current_user),
-):
-    start_time = time.time()
-    request_id = request.state.request_id
-    try:
-        logger.info("Creating user")
-        user = create_user_controller(new_user)
-        process_time = time.time() - start_time
-        if not user:
-            response.status_code = 409
-            return ConflictResponse(
-                request_id=request_id,
-                process_time=process_time,
-                func="create_user",
-                message="User already exists",
+        logger.error(f"Error getting avatars: {e}")
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
             )
-        logger.info(f"Created user in {process_time:.2f} seconds")
-        return UserOut(
-            request_id=request_id,
-            process_time=process_time,
-            func="create_user",
-            message="User created",
-            payload=user,
-        )
-    except Exception as e:
-        logger.error(f"Error creating user: {e}")
-        response.status_code = 500
-        return InternalServerErrorResponse(
-            request_id=request_id, message=str(e), func="create_user"
-        )
-
-
-@users_router.put(
-    "/info/{user_id}",
-    responses={
-        200: {"model": UserTokenOut},
-        409: {"model": ConflictResponse},
-        500: {"model": InternalServerErrorResponse},
-    },
-)
-async def update_user_info(
-    request: Request,
-    response: Response,
-    user_id: str,
-    current_user: dict = Depends(get_current_user),
-    new_user: UpdateUser = None,
-):
-    start_time = time.time()
-    request_id = request.state.request_id
-    try:
-        logger.info(f"Updating user {user_id} info")
-
-        if current_user["sub"] != user_id:
-            response.status_code = 409
-            return ConflictResponse(
-                request_id=request_id,
-                func="update_user_info",
-                message="Cannot update own info",
-            )
-
-        success, value = update_user_info_controller(user_id, new_user)
-        process_time = time.time() - start_time
-        if not success:
-            response.status_code = 409
-            return ConflictResponse(
-                request_id=request_id,
-                process_time=process_time,
-                func="update_user_info",
-                message=value,
-            )
-        logger.info(
-            f"Updated user {user_id} info in {process_time:.2f} seconds"
-        )
-        return UserTokenOut(
-            request_id=request_id,
-            process_time=process_time,
-            func="update_user_info",
-            message="User info updated",
-            payload=value,
-        )
-    except Exception as e:
-        logger.error(f"Error updating user {user_id} info: {e}")
-        response.status_code = 500
-        return InternalServerErrorResponse(
-            request_id=request_id, message=str(e), func="update_user_info"
-        )
-
-
-@users_router.put(
-    "/avatar",
-    responses={
-        200: {"model": UserOut},
-        404: {"model": NotFoundResponse},
-        500: {"model": InternalServerErrorResponse},
-    },
-)
-async def change_user_avatar(
-    request: Request,
-    response: Response,
-    avatar: str,
-    current_user: dict = Depends(get_current_user),
-):
-    start_time = time.time()
-    request_id = request.state.request_id
-    try:
-        user_id = current_user["sub"]
-        logger.info(f"Changing user {user_id} avatar")
-
-        success, value = change_user_avatar_controller(user_id, avatar)
-        process_time = time.time() - start_time
-        if not success:
-            response.status_code = 404
-            return NotFoundResponse(
-                request_id=request_id,
-                process_time=process_time,
-                func="change_user_avatar",
-                message="User not found",
-            )
-        logger.info(
-            f"Changed user {user_id} avatar in {process_time:.2f} seconds"
-        )
-        return UserOut(
-            request_id=request_id,
-            process_time=process_time,
-            func="change_user_avatar",
-            message="User avatar changed",
-            payload=value,
-        )
-    except Exception as e:
-        logger.error(f"Error changing user {user_id} avatar: {e}")
-        response.status_code = 500
-        return InternalServerErrorResponse(
-            request_id=request_id, message=str(e), func="change_user_avatar"
-        )
-
-
-@users_router.put(
-    "/status/{user_id}",
-    responses={
-        200: {"model": UserOut},
-        404: {"model": NotFoundResponse},
-        409: {"model": ConflictResponse},
-        500: {"model": InternalServerErrorResponse},
-    },
-)
-async def change_user_status(
-    request: Request,
-    response: Response,
-    user_id: str,
-    user_status: UpdateStatus,
-    current_user: dict = Depends(get_current_user),
-):
-    start_time = time.time()
-    request_id = request.state.request_id
-    try:
-        logger.info(f"Changing user {user_id} status")
-
-        if not current_user["is_admin"]:
-            response.status_code = 409
-            return ConflictResponse(
-                request_id=request_id,
-                func="change_user_status",
-                message="Unauthorized",
-            )
-
-        if current_user["sub"] == user_id:
-            response.status_code = 409
-            return ConflictResponse(
-                request_id=request_id,
-                func="change_user_status",
-                message="Cannot change own status",
-            )
-
-        user = change_user_status_controller(
-            user_id, user_status.is_active, user_status.is_admin
-        )
-        process_time = time.time() - start_time
-        if not user:
-            response.status_code = 404
-            return NotFoundResponse(
-                request_id=request_id,
-                process_time=process_time,
-                func="change_user_status",
-                message="User not found",
-            )
-        logger.info(
-            f"Changed user {user_id} status in {process_time:.2f} seconds"
-        )
-        return UserOut(
-            request_id=request_id,
-            process_time=process_time,
-            func="change_user_status",
-            message="User status changed",
-            payload=user,
-        )
-    except Exception as e:
-        logger.error(f"Error changing user {user_id} status: {e}")
-        response.status_code = 500
-        return InternalServerErrorResponse(
-            request_id=request_id, message=str(e), func="change_user_status"
-        )
-
-
-@users_router.delete(
-    "/{user_id}",
-    responses={
-        200: {"model": SuccessResponse},
-        404: {"model": NotFoundResponse},
-        500: {"model": InternalServerErrorResponse},
-    },
-)
-async def delete_user(
-    request: Request,
-    response: Response,
-    user_id: str,
-    current_user: dict = Depends(get_current_user),
-):
-    start_time = time.time()
-    request_id = request.state.request_id
-    try:
-        logger.info(f"Deleting user {user_id}")
-
-        if not current_user["is_admin"]:
-            response.status_code = 409
-            return ConflictResponse(
-                request_id=request_id,
-                func="delete_user",
-                message="Unauthorized",
-            )
-
-        status = delete_user_controller(user_id)
-        process_time = time.time() - start_time
-        if not status:
-            response.status_code = 404
-            return NotFoundResponse(
-                request_id=request_id,
-                process_time=process_time,
-                func="delete_user",
-                message="User not found",
-            )
-        logger.info(f"Deleted user {user_id} in {process_time:.2f} seconds")
-        return SuccessResponse(
-            request_id=request_id,
-            process_time=process_time,
-            func="delete_user",
-            message="User deleted",
-        )
-    except Exception as e:
-        logger.error(f"Error deleting user {user_id}: {e}")
-        response.status_code = 500
-        return InternalServerErrorResponse(
-            request_id=request_id, message=str(e), func="delete_user"
-        )
+        raise

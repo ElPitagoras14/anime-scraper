@@ -5,13 +5,24 @@ import { LucideIcon } from "lucide-react";
 
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
-  icon?: LucideIcon;
-  iconFn?: () => void;
+  iconInfo?: {
+    position: "left" | "right";
+    icon: LucideIcon;
+    fn: () => void;
+  };
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, icon: Icon, iconFn, ...props }, ref) => (
+  ({ className, type, iconInfo, ...props }, ref) => (
     <div className="relative">
+      {iconInfo && iconInfo.position === "left" && (
+        <div className="absolute inset-y-0 end-3 flex items-center ps-3">
+          <iconInfo.icon
+            className="h-5 w-5 text-muted-foreground hover:cursor-pointer z-20"
+            onClick={iconInfo.fn}
+          />
+        </div>
+      )}
       <input
         type={type}
         className={cn(
@@ -21,11 +32,11 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         ref={ref}
         {...props}
       />
-      {Icon && (
+      {iconInfo && iconInfo.position === "right" && (
         <div className="absolute inset-y-0 end-3 flex items-center ps-3">
-          <Icon
+          <iconInfo.icon
             className="h-5 w-5 text-muted-foreground hover:cursor-pointer z-20"
-            onClick={iconFn}
+            onClick={iconInfo.fn}
           />
         </div>
       )}

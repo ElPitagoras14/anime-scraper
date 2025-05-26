@@ -5,36 +5,17 @@ from pydantic.alias_generators import to_camel
 from utils.responses import SuccessResponse
 
 
-class DownloadJob(BaseModel):
-    anime: str
-    episode: str
-    job_id: str
-
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
+class RelatedInfo(BaseModel):
+    id: str
+    title: str
+    type: str
 
 
-class DownloadJobOut(SuccessResponse):
-    payload: DownloadJob | None
-
-
-class DownloadJobList(BaseModel):
-    items: list[DownloadJob]
-    total: int
-
-
-class DownloadJobListOut(SuccessResponse):
-    payload: DownloadJobList | None
-
-
-class Episode(BaseModel):
+class EpisodeInfo(BaseModel):
     id: int
-    name: str
-    link: str
-    episode_id: int
+    anime_id: str
+    image_preview: str | None = None
+    is_downloaded: bool
 
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -43,24 +24,46 @@ class Episode(BaseModel):
     )
 
 
-class AnimeStreamingLinks(BaseModel):
-    name: str
-    items: list[Episode] | None
+class BaseAnime(BaseModel):
+    id: str
+    title: str
+    type: str
+    poster: str
+    is_saved: bool
+    save_date: datetime | None = None
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+
+
+class SearchAnimeResult(BaseAnime):
+    pass
+
+
+class SearchAnimeResultList(BaseModel):
+    items: list[SearchAnimeResult]
     total: int
 
 
-class AnimeStreamingLinksOut(SuccessResponse):
-    payload: AnimeStreamingLinks | None
+class SearchAnimeResultListOut(SuccessResponse):
+    payload: SearchAnimeResultList | None
 
 
-class Anime(BaseModel):
-    anime_id: str
-    name: str
+class Anime(BaseAnime):
+    season: int | None = None
+    platform: str
     description: str
-    image: str
+    genres: list[str]
+    other_titles: list[str]
+    related_info: list[RelatedInfo]
+    week_day: str | None = None
+    episodes: list[EpisodeInfo]
     is_finished: bool
-    week_day: str | None
-    is_saved: bool = False
+    last_scraped_at: datetime | None = None
+    last_forced_update: datetime | None = None
 
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -73,107 +76,45 @@ class AnimeOut(SuccessResponse):
     payload: Anime | None
 
 
-class AnimeList(BaseModel):
-    items: list[Anime]
+class InEmissionAnime(BaseAnime):
+    week_day: str
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+
+
+class InEmissionAnimeList(BaseModel):
+    items: list[InEmissionAnime]
     total: int
 
 
-class AnimeListOut(SuccessResponse):
-    payload: AnimeList | None
+class InEmissionAnimeListOut(SuccessResponse):
+    payload: InEmissionAnimeList | None
 
 
-class AnimeCard(BaseModel):
-    name: str
-    image: str
+class EpisodeDownload(BaseModel):
+    id: int
     anime_id: str
-    is_saved: bool = False
-
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
-
-
-class AnimeCardList(BaseModel):
-    items: list[AnimeCard]
-    total: int
-
-
-class AnimeCardListOut(SuccessResponse):
-    payload: AnimeCardList | None
-
-
-class AnimeCache(BaseModel):
-    anime_id: str
-    name: str
-    size: float
-
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
-
-
-class AnimeCacheList(BaseModel):
-    items: list[AnimeCache]
-    size: str
-    measured_in: str
-    total: int
-
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
-
-
-class AnimeCacheListOut(SuccessResponse):
-    payload: AnimeCacheList | None
-
-
-class DownloadJobInfo(BaseModel):
-    job_id: str
+    title: str
+    episode_number: int
+    poster: str
+    job_id: str | None = None
+    size: int | None = None
     status: str
-    progress: float
-    total: str
+    downloaded_at: datetime | None = None
 
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
         from_attributes=True,
     )
-
-
-class DownloadJobInfoOut(SuccessResponse):
-    payload: DownloadJobInfo | None
-
-
-class EpisodeDownloadInfo(BaseModel):
-    episode_id: int
-    image: str
-    anime: str
-    episode_name: str
-    created_at: datetime
-    status: str
-    progress: float
-    total: str
-    filename: str
-
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
-
-
-class EpisodeDownloadInfoOut(SuccessResponse):
-    payload: EpisodeDownloadInfo | None
 
 
 class EpisodeDownloadList(BaseModel):
-    items: list[EpisodeDownloadInfo]
+    items: list[EpisodeDownload]
     total: int
 
 
@@ -181,17 +122,37 @@ class EpisodeDownloadListOut(SuccessResponse):
     payload: EpisodeDownloadList | None
 
 
-class Statistics(BaseModel):
-    animes_saved: int
-    episodes_to_download: int
-    animes_in_emission: int
-
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
+class AnimeDownloadInfo(BaseModel):
+    id: str
+    title: str
 
 
-class StatisticsOut(SuccessResponse):
-    payload: Statistics | None
+class AnimeDownloadInfoList(BaseModel):
+    items: list[AnimeDownloadInfo]
+    total: int
+
+
+class AnimeDownloadInfoListOut(SuccessResponse):
+    payload: AnimeDownloadInfoList | None
+
+
+class DownloadTask(BaseModel):
+    job_id: str | None = None
+
+
+class DownloadTaskOut(SuccessResponse):
+    payload: DownloadTask | None
+
+
+class DownloadTaskStatus(DownloadTask):
+    episode_number: int
+    success: bool
+
+
+class DownloadTaskList(BaseModel):
+    items: list[DownloadTaskStatus]
+    total: int
+
+
+class DownloadTaskListOut(SuccessResponse):
+    payload: DownloadTaskList | None

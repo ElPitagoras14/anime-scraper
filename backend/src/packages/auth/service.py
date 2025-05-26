@@ -1,77 +1,82 @@
-from datetime import datetime, timedelta, timezone
-from jose import jwt
 from loguru import logger
+from starlette import status
 
 from databases.postgres import DatabaseSession, User
+from utils.exceptions import NotFoundException, ConflictException
+from .utils import (
+    get_hash,
+    verify_password,
+    create_access_token,
+    create_refresh_token,
+    verify_token,
+    cast_tokens,
+    cast_access_token,
+)
 
-from .utils import get_password_hash, verify_password
-from .config import auth_settings
-from .responses import Token
 
-
-SECRET_KEY = auth_settings.SECRET_KEY
-ALGORITHM = auth_settings.ALGORITHM
-EXPIRE_MINUTES = auth_settings.EXPIRE_MINUTES
-
-
-def login_controller(username: str, password: str):
+def login_controller(username: str, password: str, request_id: str):
     logger.debug(f"User {username} is trying to log in")
     with DatabaseSession() as db:
         user = db.query(User).filter(User.username == username).first()
         if not user:
-            return False, "User not found"
+            logger.debug(f"User {username} not found")
+            raise NotFoundException("User not found", request_id=request_id)
         if not verify_password(password, user.password):
-            return False, "Invalid password"
+            logger.debug(f"Password for user {username} is wrong")
+            raise ConflictException("Password is wrong", request_id=request_id)
         if not user.is_active:
-            return False, "User is not active, please contact an admin"
+            logger.debug(f"User {username} is not active")
+            raise ConflictException(
+                "User is not active", request_id=request_id
+            )
         logger.info(f"User {username} logged in")
-        return True, create_access_token(
+        access_token = create_access_token(
             {
-                "sub": str(user.id),
+                "id": str(user.id),
                 "username": user.username,
-                "is_active": user.is_active,
-                "is_admin": user.is_admin,
-                "avatar": user.avatar,
-            }
+                "isActive": user.is_active,
+                "role": user.role.name,
+            },
         )
+        refresh_token = create_refresh_token(
+            {
+                "id": str(user.id),
+                "username": user.username,
+                "isActive": user.is_active,
+                "role": user.role.name,
+            },
+        )
+        casted_tokens = cast_tokens(access_token, refresh_token)
+        return status.HTTP_200_OK, casted_tokens
 
 
-def register_controller(username: str, password: str, avatar: str = None):
+def register_controller(username: str, password: str, request_id: str):
     logger.debug(f"User {username} is trying to register")
     with DatabaseSession() as db:
         user = db.query(User).filter(User.username == username).first()
         if user:
-            return False, "User already exists"
-        hashed_password = get_password_hash(password)
+            logger.debug(f"User {username} already exists")
+            raise ConflictException(
+                "User already exists", request_id=request_id
+            )
+        hashed_password = get_hash(password)
         user = User(username=username, password=hashed_password)
-        if avatar:
-            user.avatar = avatar
         db.add(user)
-        db.commit()
         logger.info(f"User {username} registered")
-        return True, "User registered"
+        return status.HTTP_200_OK, "User registered successfully"
 
 
-def create_access_token(data: dict, expires_delta: timedelta = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return Token(
-        token=encoded_jwt,
-        type="bearer",
-    )
-
-
-def verify_token(token: str):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except jwt.JWTError:
-        return False
-    except Exception as e:
-        logger.error(f"Error verifying token: {e}")
-        return False
+def refresh_controller(refresh_token: str, request_id: str):
+    logger.debug("Refreshing token")
+    if not refresh_token:
+        logger.debug("No refresh token provided")
+        raise ConflictException(
+            "No refresh token provided", request_id=request_id
+        )
+    payload = verify_token(refresh_token)
+    if not payload:
+        logger.debug("Invalid refresh token")
+        raise ConflictException("Invalid refresh token", request_id=request_id)
+    new_access_token = create_access_token(payload)
+    casted_access_token = cast_access_token(new_access_token)
+    return status.HTTP_200_OK, casted_access_token
