@@ -76,6 +76,8 @@ export default function Login() {
         if (response?.error) {
           if (response.error === "CredentialsSignin") {
             toast.error("Invalid username or password");
+          } else {
+            toast.error("Something went wrong");
           }
         } else {
           router.push("/home");
