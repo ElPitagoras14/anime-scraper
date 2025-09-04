@@ -1,6 +1,6 @@
 "use client";
 
-import { TelescopeIcon } from "lucide-react";
+import { CopyIcon, TelescopeIcon } from "lucide-react";
 import Link from "next/link";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -15,6 +15,12 @@ import { signIn } from "next-auth/react";
 import { Icons } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const fields: FormField[] = [
   {
@@ -52,8 +58,8 @@ export default function Login() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "admin",
-      password: "admin",
+      username: "",
+      password: "",
     },
   });
 
@@ -82,6 +88,11 @@ export default function Login() {
     }
   );
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
+  };
+
   return (
     <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
       <div className="w-full max-w-sm">
@@ -103,6 +114,36 @@ export default function Login() {
                 </Link>
               </div>
             </div>
+            <Accordion type="single" collapsible>
+              <AccordionItem value="guest">
+                <AccordionTrigger>
+                  <span className="text-base font-semibold">Guest User</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="flex flex-col gap-y-2">
+                    <div className="flex justify-between py-2 px-2 bg-muted/50 rounded-md">
+                      <span className="text-sm">
+                        <span className="font-semibold">Username: </span>guest
+                      </span>
+                      <CopyIcon
+                        className="w-4 h-4 cursor-pointer"
+                        onClick={() => copyToClipboard("guest")}
+                      />
+                    </div>
+                    <div className="flex justify-between py-2 px-2 bg-muted/50 rounded-md">
+                      <span className="text-sm">
+                        <span className="font-semibold">Password: </span>
+                        guest123
+                      </span>
+                      <CopyIcon
+                        className="w-4 h-4 cursor-pointer"
+                        onClick={() => copyToClipboard("guest123")}
+                      />
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
             <div className="flex flex-col gap-2">
               {fields.map((field) => (
                 <CustomField key={field.name} form={form} fieldInfo={field} />

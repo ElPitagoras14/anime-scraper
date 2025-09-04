@@ -29,7 +29,13 @@ export type EpisodeDownload = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export const animeColumns: ColumnDef<EpisodeDownload>[] = [
+interface AnimeColumnsProps {
+  role: string;
+}
+
+export const getAnimeColumns = ({
+  role,
+}: AnimeColumnsProps): ColumnDef<EpisodeDownload>[] => [
   {
     accessorKey: "poster",
     header: () => <div className="text-center">Poster</div>,
@@ -105,6 +111,7 @@ export const animeColumns: ColumnDef<EpisodeDownload>[] = [
             <Button
               variant="ghost"
               size="icon"
+              disabled={role !== "admin" && role !== "member"}
               onClick={() =>
                 (window.location.href = `${API_URL}/api/animes/download/episode/${id}`)
               }
@@ -153,10 +160,16 @@ export const animeColumns: ColumnDef<EpisodeDownload>[] = [
                 Go to anime
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer">
+            <DropdownMenuItem
+              className="cursor-pointer"
+              disabled={role !== "admin" && role !== "member"}
+            >
               Force re download
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer">
+            <DropdownMenuItem
+              className="cursor-pointer"
+              disabled={role !== "admin" && role !== "member"}
+            >
               Delete download
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { animeColumns, EpisodeDownload } from "./components/columns";
+import { getAnimeColumns, EpisodeDownload } from "./components/columns";
 import apiClient from "@/lib/api-client";
 import { useEffect, useRef, useState } from "react";
 import { DataTable } from "@/components/data-table/data-table";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { PaginationState, SortingState } from "@tanstack/react-table";
+import { useSession } from "next-auth/react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -85,6 +86,8 @@ export default function Downloads() {
     pageSize: 10,
   });
 
+  const { data: session } = useSession();
+
   const queryParams = {
     pagination,
     sorting,
@@ -110,6 +113,10 @@ export default function Downloads() {
 
   const items = serverData?.data?.payload?.items;
   const animes = animesData?.data?.payload?.items;
+
+  const animeColumns = getAnimeColumns({
+    role: session?.user?.role || "guest",
+  });
 
   useEffect(() => {
     if (!serverData) return;

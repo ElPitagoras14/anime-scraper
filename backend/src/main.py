@@ -42,6 +42,20 @@ async def lifespan(app: FastAPI):
             db.commit()
             db.refresh(root_user)
             logger.success(f"Admin user '{ADMIN_USER}' created successfully")
+        guest_user = db.query(User).filter(User.role_id == 3).first()
+        if not guest_user:
+            logger.info("Guest user not found, creating...")
+            hashed_password = get_hash("guest123")
+            guest_user = User(
+                username="guest",
+                password=hashed_password,
+                role_id=3,
+                is_active=True,
+            )
+            db.add(guest_user)
+            db.commit()
+            db.refresh(guest_user)
+            logger.success("Guest user 'guest' created successfully")
 
     logger.info("Application starting up...")
     yield
