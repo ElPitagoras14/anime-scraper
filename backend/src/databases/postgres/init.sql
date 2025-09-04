@@ -112,7 +112,7 @@ INSERT INTO
   role_types (name)
 VALUES
   ('admin'),
-  ('user'),
+  ('member'),
   ('guest');
 
 INSERT INTO

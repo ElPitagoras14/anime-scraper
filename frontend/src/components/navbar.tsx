@@ -101,13 +101,19 @@ export default function Navbar() {
           <DropdownMenuContent className="w-56" align="start">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push("/profile")}>
+              <DropdownMenuItem
+                onClick={() => router.push("/profile")}
+                disabled
+              >
                 Profile
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/downloads")}>
                 Downloads
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/settings")}>
+              <DropdownMenuItem
+                onClick={() => router.push("/settings")}
+                disabled
+              >
                 Settings
               </DropdownMenuItem>
             </DropdownMenuGroup>
