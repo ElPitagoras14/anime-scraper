@@ -97,7 +97,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL_REMOTE}
+        - NEXT_PUBLIC_API_URL_REMOTE=${NEXT_PUBLIC_API_URL_REMOTE}
     ports:
       - "${WEB_REMOTE_PORT}:3000"
     environment:
