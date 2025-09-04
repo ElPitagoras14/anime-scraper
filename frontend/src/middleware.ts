@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 const AUTH_SECRET = "secret";
 
-const unprotectedPaths = ["/login", "/register"];
+const unprotectedPaths = ["/login", "/register", "/"];
 
 export default auth(async (req) => {
   const token = await getToken({
@@ -12,7 +12,6 @@ export default auth(async (req) => {
     secret: AUTH_SECRET,
   });
   const baseUrl = req.nextUrl.origin;
-
 
   if (unprotectedPaths.includes(req.nextUrl.pathname)) {
     return NextResponse.next();
@@ -23,10 +22,7 @@ export default auth(async (req) => {
   }
 
   if (token && Date.now() >= token.data.validity.refreshUntil * 1000) {
-    console.log("token expired");
-    // Redirect to the login page
     const response = NextResponse.redirect(`${baseUrl}/login`);
-    // Clear the session cookies
     response.cookies.set("next-auth.session-token", "", { maxAge: 0 });
     response.cookies.set("next-auth.csrf-token", "", { maxAge: 0 });
 

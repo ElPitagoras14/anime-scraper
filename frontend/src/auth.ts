@@ -62,6 +62,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
+  useSecureCookies: false,
   callbacks: {
     jwt: async ({ token, user, account }) => {
       if (user && account) {
@@ -104,7 +105,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   pages: {
-    signIn: "/",
+    signIn: "/login",
   },
   trustHost: true,
 });
