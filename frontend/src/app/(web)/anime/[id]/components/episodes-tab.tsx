@@ -296,10 +296,29 @@ export default function EpisodesTab({ anime }: EpisodesTabProps) {
                   <div>{getIdx(idx, sortOrder, anime.episodes.length)}</div>
                   <div>Episode {episode.id}</div>
                   <div className="flex justify-center items-center">
-                    {episode.isDownloaded ? (
-                      <CircleCheckIcon className="text-green-500 dark:text-green-400" />
+                    {episode.isUserDownloaded ? (
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <CircleCheckIcon className="text-green-500 dark:text-green-400" />
+                        </TooltipTrigger>
+                        <TooltipContent>Downloaded by you</TooltipContent>
+                      </Tooltip>
+                    ) : episode.isGlobalDownloaded ? (
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <CircleCheckIcon className="text-indigo-500 dark:text-indigo-400" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Downloaded by other user
+                        </TooltipContent>
+                      </Tooltip>
                     ) : (
-                      <CircleXIcon className="text-red-500 dark:text-red-400" />
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <CircleXIcon className="text-red-500 dark:text-red-400" />
+                        </TooltipTrigger>
+                        <TooltipContent>Not downloaded yet</TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                   <div className="flex justify-center gap-2">

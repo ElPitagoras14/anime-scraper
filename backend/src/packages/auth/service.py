@@ -36,6 +36,8 @@ def login_controller(username: str, password: str, request_id: str):
                 "username": user.username,
                 "isActive": user.is_active,
                 "role": user.role.name,
+                "avatarUrl": user.avatar.url if user.avatar else None,
+                "avatarLabel": user.avatar.label if user.avatar else None,
             },
         )
         refresh_token = create_refresh_token(
@@ -44,6 +46,8 @@ def login_controller(username: str, password: str, request_id: str):
                 "username": user.username,
                 "isActive": user.is_active,
                 "role": user.role.name,
+                "avatarUrl": user.avatar.url if user.avatar else None,
+                "avatarLabel": user.avatar.label if user.avatar else None,
             },
         )
         casted_tokens = cast_tokens(access_token, refresh_token)

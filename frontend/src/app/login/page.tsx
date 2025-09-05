@@ -118,7 +118,7 @@ export default function Login() {
             </div>
             <Accordion type="single" collapsible>
               <AccordionItem value="guest">
-                <AccordionTrigger>
+                <AccordionTrigger className="cursor-pointer">
                   <span className="text-base font-semibold">Guest User</span>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -146,7 +146,10 @@ export default function Login() {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-            <div className="flex flex-col gap-2">
+            <div
+              className="flex flex-col gap-2"
+              onKeyDown={(e) => e.key === "Enter" && onSubmit()}
+            >
               {fields.map((field) => (
                 <CustomField key={field.name} form={form} fieldInfo={field} />
               ))}

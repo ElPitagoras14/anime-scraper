@@ -1,0 +1,13 @@
+name: Deploy to Dokploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger deploy hook
+        run: curl -X POST "https://dokploy.elpitagoras14.xyz/api/deploy/compose/N76WoR7QySMGLLzj4zfH4"

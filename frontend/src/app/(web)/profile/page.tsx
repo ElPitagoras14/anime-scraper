@@ -2,32 +2,114 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Image from "next/image";
 import ChangePassword from "./components/change-password";
-import { PencilIcon, SquareCheckIcon, SquareXIcon } from "lucide-react";
+import {
+  CheckIcon,
+  PencilIcon,
+  SquareCheckIcon,
+  SquareXIcon,
+  XIcon,
+} from "lucide-react";
 import ChangeAvatar from "./components/change-avatar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import React from "react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useSession } from "next-auth/react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import apiClient from "@/lib/api-client";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useDebounce } from "use-debounce";
+import { Separator } from "@/components/ui/separator";
+import { Icons } from "@/components/ui/icons";
+import { cn } from "@/lib/utils";
+
+const updateUsername = async (username: string) => {
+  const options = {
+    method: "PUT",
+    url: `/users`,
+    data: {
+      username,
+    },
+  };
+
+  return apiClient(options);
+};
+
+const checkUsername = async (username: string) => {
+  const options = {
+    method: "GET",
+    url: `/users/username/${username}`,
+  };
+
+  return apiClient(options);
+};
 
 export default function Profile() {
+  const { data: session } = useSession();
+  const [username, setUsername] = useState<string | undefined>(
+    session?.user.username
+  );
   const [editUsername, setEditUsername] = useState<boolean>(false);
+  const [usernameDebounced] = useDebounce(username, 500);
+
+  const { update } = useSession();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["username", usernameDebounced],
+    queryFn: () => checkUsername(usernameDebounced!),
+    refetchOnWindowFocus: false,
+    enabled: !!usernameDebounced,
+  });
+
+  const usernameAvailable =
+    data?.data?.payload || username === session?.user.username;
+
+  const updateUsernameMutation = useMutation({
+    mutationFn: updateUsername,
+    onError: () => {
+      toast.error("Error updating username");
+    },
+    onSuccess: async () => {
+      await update({
+        user: {
+          ...session?.user,
+        },
+      });
+      toast.success("Username updated successfully");
+    },
+    onSettled: () => setEditUsername(false),
+  });
+
+  useEffect(() => {
+    if (session?.user) {
+      setUsername(session.user.username);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user.username]);
+
+  const firstTwoChars = session?.user.username.slice(0, 2);
+  const canUpdate = data?.data?.payload && username !== session?.user.username;
+
   return (
     <div className="flex flex-colitems-center justify-center">
       <div className="w-[65%] flex flex-col gap-y-6">
         <span className="text-3xl font-semibold">Profile</span>
         <div className="flex flex-row items-center gap-x-10">
-          <div className="w-40 h-40 relative rounded-full bg-muted/20">
-            <Image
-              src={"https://i.ibb.co/kVN40QY0/magician.png"}
-              alt={""}
-              fill
-              className="p-6"
-            />
+          <div className="rounded-full bg-muted/20">
+            <Avatar className="w-32 h-32 p-5">
+              <AvatarImage
+                src={session?.user.avatarUrl}
+                alt={session?.user.avatarLabel}
+              />
+              <AvatarFallback className="text-2xl font-semibold">
+                {firstTwoChars?.toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
           </div>
           <ChangeAvatar />
         </div>
@@ -39,7 +121,34 @@ export default function Profile() {
               placeholder="Username"
               type="text"
               className="w-64"
+              value={username || ""}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={!editUsername}
             />
+            {editUsername && (
+              <>
+                {isLoading ? (
+                  <Icons.spinner className="animate-spin" />
+                ) : canUpdate ? (
+                  usernameAvailable ? (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <CheckIcon className="text-green-500 dark:text-green-400 w-6 h-6" />
+                      </TooltipTrigger>
+                      <TooltipContent>Username available</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <XIcon className="text-red-500 dark:text-red-400 w-6 h-6" />
+                      </TooltipTrigger>
+                      <TooltipContent>Username not available</TooltipContent>
+                    </Tooltip>
+                  )
+                ) : null}
+                <Separator orientation="vertical" />
+              </>
+            )}
             {!editUsername ? (
               <Tooltip>
                 <TooltipTrigger>
@@ -54,11 +163,19 @@ export default function Profile() {
               <React.Fragment>
                 <SquareXIcon
                   className="w-7 h-7 cursor-pointer text-red-500 dark:text-red-400"
-                  onClick={() => setEditUsername(false)}
+                  onClick={() => {
+                    setEditUsername(false);
+                    setUsername(session?.user.username);
+                  }}
                 />
                 <SquareCheckIcon
-                  className="w-7 h-7 cursor-pointer text-green-500 dark:text-green-400"
-                  onClick={() => setEditUsername(false)}
+                  className={cn(
+                    "w-7 h-7 text-green-500 dark:text-green-400",
+                    canUpdate ? "cursor-pointer" : "opacity-50"
+                  )}
+                  onClick={() =>
+                    canUpdate && updateUsernameMutation.mutate(username!)
+                  }
                 />
               </React.Fragment>
             )}

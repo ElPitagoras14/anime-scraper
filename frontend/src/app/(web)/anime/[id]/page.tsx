@@ -9,7 +9,7 @@ import SidebarInfo from "./components/sidebar-info";
 import apiClient from "@/lib/api-client";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface RelatedInfo {
@@ -22,13 +22,15 @@ interface EpisodeInfo {
   id: number;
   animeId: string;
   imagePreview: string;
-  isDownloaded: boolean;
+  isUserDownloaded: boolean;
+  isGlobalDownloaded: boolean;
 }
 
-const getAnimeInfo = async (id: string) => {
+const getAnimeInfo = async (id: string, forceUpdate: boolean = false) => {
   const options = {
     method: "GET",
     url: `/animes/info/${id}`,
+    params: { force_update: forceUpdate },
   };
 
   return await apiClient(options);
@@ -56,6 +58,8 @@ export interface AnimeInfo {
 export default function Anime() {
   const params = useParams();
   const id = params.id as string;
+  const [minutesAgo, setMinutesAgo] = useState<number | null>(null);
+  const [minutesToWait, setMinutesToWait] = useState<number | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["anime", id],
@@ -63,10 +67,8 @@ export default function Anime() {
     refetchOnWindowFocus: false,
   });
 
+  const queryClient = useQueryClient();
   const anime = data?.data?.payload;
-
-  const [minutesAgo, setMinutesAgo] = useState<number | null>(null);
-  const [minutesToWait, setMinutesToWait] = useState<number | null>(null);
 
   useEffect(() => {
     if (!anime) return;
@@ -76,7 +78,7 @@ export default function Anime() {
       setMinutesToWait(5 - getMinutesAgo(new Date(anime.lastForcedUpdate)));
     };
 
-    updateTimes(); // primera vez
+    updateTimes();
     const interval = setInterval(updateTimes, 60 * 1000);
 
     return () => clearInterval(interval);
@@ -131,6 +133,10 @@ export default function Anime() {
               variant="destructive"
               className="cursor-pointer"
               disabled={minutesToWait > 0}
+              onClick={async () => {
+                const freshData = await getAnimeInfo(id, true);
+                queryClient.setQueryData(["anime", id], freshData);
+              }}
             >
               Force update
             </Button>

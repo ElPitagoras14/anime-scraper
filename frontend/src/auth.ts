@@ -43,6 +43,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             username: access.username,
             isActive: access.isActive,
             role: access.role,
+            avatarUrl: access.avatarUrl,
+            avatarLabel: access.avatarLabel,
           };
 
           const validity: AuthValidity = {
@@ -64,10 +66,38 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   useSecureCookies: false,
   callbacks: {
-    jwt: async ({ token, user, account }) => {
+    jwt: async ({ token, user, account, trigger }) => {
       if (user && account) {
         console.log("Initial signin");
         return { ...token, data: user };
+      }
+
+      if (trigger === "update") {
+        console.log("Update user");
+        try {
+          const userInfoOptions = {
+            method: "GET",
+            url: `${API_URL}/api/users/me`,
+            headers: {
+              Authorization: `Bearer ${token.data.tokens.access}`,
+            },
+          };
+
+          const response = await axios(userInfoOptions);
+          const updatedUser = response.data.payload;
+
+          token.data.user = {
+            ...token.data.user,
+            avatarUrl: updatedUser.avatarUrl,
+            avatarLabel: updatedUser.avatarLabel,
+            username: updatedUser.username,
+            role: updatedUser.role,
+          };
+
+          console.log("Updated user info:", updatedUser);
+        } catch (error) {
+          console.error("Error fetching updated user info:", error);
+        }
       }
 
       if (Date.now() < token.data.validity.validUntil * 1000) {

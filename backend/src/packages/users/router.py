@@ -9,7 +9,9 @@ from utils.exceptions import (
 )
 from utils.responses import APIResponse
 from .service import (
+    check_username_controller,
     get_avatars_controller,
+    get_me_controller,
     get_users_controller,
     update_user_controller,
 )
@@ -41,6 +43,62 @@ async def get_users(
         return response_data
     except Exception as e:
         logger.error(f"Error getting users: {e}")
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
+            )
+        raise
+
+
+@users_router.get("/me")
+async def get_me(
+    request: Request,
+    response: Response,
+    current_user: dict = Depends(auth_scheme),
+):
+    request.state.func = "get_me"
+    try:
+        logger.info("Getting me")
+        status, data = await get_me_controller(
+            current_user["id"], request.state.request_id
+        )
+        response.status_code = status
+        response_data = APIResponse(
+            success=True,
+            message="User retrieved",
+            func="get_me",
+            payload=data,
+        )
+        return response_data
+    except Exception as e:
+        logger.error(f"Error getting me: {e}")
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
+            )
+        raise
+
+
+@users_router.get("/username/{username}")
+async def check_username(
+    username: str,
+    request: Request,
+    response: Response,
+):
+    request.state.func = "check_username"
+    try:
+        logger.info(f"Checking username {username}")
+        status, data = await check_username_controller(username)
+        response.status_code = status
+        response_data = APIResponse(
+            success=True,
+            message="Username checked",
+            func="check_username",
+            payload=data,
+        )
+        return response_data
+    except Exception as e:
+        logger.error(f"Error checking username {username}: {e}")
         if not isinstance(e, (NotFoundException, ConflictException)):
             raise InternalServerErrorException(
                 "Internal server error", request_id=request.state.request_id

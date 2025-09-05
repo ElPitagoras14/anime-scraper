@@ -23,15 +23,21 @@ export default function CalendarAnimes({ animes }: CalendarAnimesProps) {
         return (
           <Tooltip key={id}>
             <TooltipTrigger>
-              <Link href={`/info/${id}`} key={id}>
-                <div className="p-2 m-1 rounded-sm bg-accent/50 hover:bg-accent hover:cursor-pointer">
+              <Link href={`/anime/${id}`} key={id}>
+                <div className="p-2 m-1 rounded-sm bg-accent/50 hover:bg-accent hover:cursor-pointer text-wrap">
                   {title}
                 </div>
               </Link>
             </TooltipTrigger>
             <TooltipContent className="bg-background">
               <div className="flex flex-row gap-x-2">
-                <Image src={poster} alt={title} width={200} height={200} className="rounded-md" />
+                <Image
+                  src={poster}
+                  alt={title}
+                  width={200}
+                  height={200}
+                  className="rounded-md"
+                />
               </div>
             </TooltipContent>
           </Tooltip>

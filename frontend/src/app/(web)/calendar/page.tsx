@@ -83,7 +83,7 @@ export default async function Calendar() {
               return (
                 <TableCell
                   key={weekDay}
-                  className="border text-wrap m-0 p-0 align-top"
+                  className="border m-0 p-0 align-top"
                 >
                   <CalendarAnimes animes={indexedByWeekDay[weekDay]} />
                 </TableCell>
