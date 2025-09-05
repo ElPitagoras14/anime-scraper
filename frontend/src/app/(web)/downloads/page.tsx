@@ -126,7 +126,6 @@ export default function Downloads() {
 
     items.forEach((episode: EpisodeDownload, idx: number) => {
       if (episode.jobId) {
-        console.log(episode.jobId);
         jobIds.push(episode.jobId);
         rawJobsMap[episode.jobId] = idx;
       }

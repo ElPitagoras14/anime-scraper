@@ -11,6 +11,8 @@ declare module "next-auth" {
     username: string;
     isActive: boolean;
     role: string;
+    avatarUrl: string;
+    avatarLabel: string;
   }
 
   /**

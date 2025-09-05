@@ -94,17 +94,16 @@ export default function Navbar() {
         <DropdownMenu>
           <DropdownMenuTrigger
             asChild
-            className="cursor-pointer hover:text-indigo-500"
           >
-            <UserRoundIcon className="w-6 h-6" />
+            <div className="flex flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500">
+              <UserRoundIcon className="w-6 h-6" />
+              <span className="text-base">Profile</span>
+            </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="start">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuGroup>
-              <DropdownMenuItem
-                onClick={() => router.push("/profile")}
-                disabled
-              >
+              <DropdownMenuItem onClick={() => router.push("/profile")}>
                 Profile
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/downloads")}>

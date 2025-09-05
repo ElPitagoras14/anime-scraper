@@ -34,7 +34,9 @@ ANIMES_FOLDER = anime_settings.ANIMES_FOLDER
 
 
 def get_anime_info_to_dict(
-    anime_db: Anime, downloaded_episodes_ids: list[int]
+    anime_db: Anime,
+    downloaded_user_episodes_ids: list[int],
+    downloaded_global_episodes_ids: list[int],
 ) -> dict:
     return {
         "id": anime_db.id,
@@ -62,7 +64,10 @@ def get_anime_info_to_dict(
                 "id": episode.ep_number,
                 "anime_id": episode.anime_id,
                 "image_preview": episode.preview,
-                "is_downloaded": episode.id in downloaded_episodes_ids,
+                "is_user_downloaded": episode.id
+                in downloaded_user_episodes_ids,
+                "is_global_downloaded": episode.id
+                in downloaded_global_episodes_ids,
             }
             for episode in anime_db.episodes
         ],
@@ -86,7 +91,6 @@ async def add_new_anime(db: DatabaseSession, base_url: str, anime_id: str):
         week_day=week_day,
         last_scraped_at=datetime.now(timezone.utc),
         last_forced_update=datetime.now(timezone.utc),
-        created_at=datetime.now(timezone.utc),
     )
     db.add(new_anime)
     db.flush()
@@ -140,7 +144,7 @@ async def add_new_anime(db: DatabaseSession, base_url: str, anime_id: str):
 
 
 async def get_anime_controller(
-    anime_id: str, user_id: str
+    anime_id: str, user_id: str, force_update: bool
 ) -> tuple[int, dict]:
     logger.debug(f"Getting anime with id: {anime_id}")
     base_url = f"https://jkanime.net/{anime_id}"
@@ -215,10 +219,13 @@ async def get_anime_controller(
             )
             current_time = datetime.now(timezone.utc)
 
-            if last_scraped_at_aware < (current_time - timedelta(hours=1)):
+            if force_update or last_scraped_at_aware < (
+                current_time - timedelta(hours=1)
+            ):
                 logger.debug("Old anime info, updating")
                 anime = await scraper.get_anime_info(anime_id)
                 anime_db.last_scraped_at = current_time
+                anime_db.last_forced_update = current_time
                 anime_db.is_finished = anime.is_finished
 
                 num_anime_episodes = len(anime.episodes)
@@ -248,7 +255,7 @@ async def get_anime_controller(
             .first()
         )
         episode_ids = [episode.id for episode in anime_db.episodes]
-        downloaded_episodes = (
+        downloaded_user_episodes = (
             db.query(UserDownloadEpisode)
             .filter(
                 UserDownloadEpisode.user_id == user_id,
@@ -256,16 +263,29 @@ async def get_anime_controller(
             )
             .all()
         )
-        downloaded_episodes_ids = [
+        downloaded_user_episodes_ids = [
             episode_download.episode_id
-            for episode_download in downloaded_episodes
+            for episode_download in downloaded_user_episodes
+        ]
+        downloaded_global_epusodes = (
+            db.query(UserDownloadEpisode)
+            .filter(
+                UserDownloadEpisode.episode_id.in_(episode_ids),
+            )
+            .all()
+        )
+        downloaded_global_episodes_ids = [
+            episode_download.episode_id
+            for episode_download in downloaded_global_epusodes
         ]
         saved_anime_info = {
             "is_saved": saved_anime is not None,
             "save_date": saved_anime.created_at if saved_anime else None,
         }
         new_anime_info = get_anime_info_to_dict(
-            anime_db, downloaded_episodes_ids
+            anime_db,
+            downloaded_user_episodes_ids,
+            downloaded_global_episodes_ids,
         )
         casted_anime = cast_anime_info(new_anime_info, saved_anime_info)
         return status.HTTP_200_OK, casted_anime
@@ -512,7 +532,11 @@ async def get_download_episode_controller(episode_id: int) -> tuple[int, dict]:
 
 
 async def download_anime_controller(
-    anime_id: str, episode_number: int, user_id: str, request_id: str
+    anime_id: str,
+    episode_number: int,
+    force_download: bool,
+    user_id: str,
+    request_id: str,
 ) -> tuple[int, str]:
     logger.debug(f"Downloading anime with id: {anime_id} - {episode_number}")
 
@@ -536,7 +560,7 @@ async def download_anime_controller(
             )
             .first()
         )
-        if download:
+        if download and not force_download:
             raise ConflictException(
                 "Download already in progress", request_id=request_id
             )
@@ -548,7 +572,7 @@ async def download_anime_controller(
             )
             .first()
         )
-        if general_download:
+        if general_download and not force_download:
             return status.HTTP_201_CREATED, cast_job_id(
                 general_download.episode.job_id
             )
@@ -558,11 +582,12 @@ async def download_anime_controller(
             args=[anime_id, episode_number, user_id, request_id],
         )
 
-        new_download = UserDownloadEpisode(
-            user_id=user_id,
-            episode_id=episode.id,
-        )
-        db.add(new_download)
+        if not force_download:
+            new_download = UserDownloadEpisode(
+                user_id=user_id,
+                episode_id=episode.id,
+            )
+            db.add(new_download)
 
         episode.job_id = result.id
         episode.status = "PENDING"

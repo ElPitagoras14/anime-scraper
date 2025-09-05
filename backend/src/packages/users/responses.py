@@ -21,6 +21,10 @@ class User(BaseModel):
     )
 
 
+class UserOut(BaseModel):
+    payload: User | None
+
+
 class UserList(BaseModel):
     items: list[User]
     total: int

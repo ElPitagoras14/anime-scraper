@@ -15,7 +15,8 @@ class EpisodeInfo(BaseModel):
     id: int
     anime_id: str
     image_preview: str | None = None
-    is_downloaded: bool
+    is_user_downloaded: bool
+    is_global_downloaded: bool
 
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -36,6 +37,9 @@ class BaseAnime(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
         from_attributes=True,
+        json_enconders={
+            datetime: lambda v: v.isoformat().replace("+00:00", "Z")
+        },
     )
 
 
@@ -69,6 +73,9 @@ class Anime(BaseAnime):
         alias_generator=to_camel,
         populate_by_name=True,
         from_attributes=True,
+        json_enconders={
+            datetime: lambda v: v.isoformat().replace("+00:00", "Z")
+        },
     )
 
 
@@ -110,6 +117,9 @@ class EpisodeDownload(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
         from_attributes=True,
+        json_enconders={
+            datetime: lambda v: v.isoformat().replace("+00:00", "Z")
+        },
     )
 
 

@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from .responses import (
     AnimeDownloadInfo,
     AnimeDownloadInfoList,
@@ -39,14 +37,15 @@ def cast_anime_info(anime: dict, saved: dict) -> Anime:
         ],
         week_day=anime["week_day"],
         is_finished=anime["is_finished"],
-        last_scraped_at=datetime.now(timezone.utc),
-        last_forced_update=datetime.now(timezone.utc),
+        last_scraped_at=anime["last_scraped_at"],
+        last_forced_update=anime["last_forced_update"],
         episodes=[
             EpisodeInfo(
                 id=episode["id"],
                 anime_id=episode["anime_id"],
                 image_preview=episode["image_preview"],
-                is_downloaded=episode["is_downloaded"],
+                is_user_downloaded=episode["is_user_downloaded"],
+                is_global_downloaded=episode["is_global_downloaded"],
             )
             for episode in anime["episodes"]
         ],

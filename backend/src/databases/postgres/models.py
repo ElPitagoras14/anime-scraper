@@ -1,5 +1,6 @@
 from sqlalchemy import (
     Column,
+    DateTime,
     String,
     Integer,
     Boolean,
@@ -76,9 +77,11 @@ class Anime(Base):
     type = Column(String(255))
     is_finished = Column(Boolean)
     week_day = Column(Text)
-    last_scraped_at = Column(TIMESTAMP)
-    last_forced_update = Column(TIMESTAMP)
-    created_at = Column(TIMESTAMP, default=func.now(), nullable=False)
+    last_scraped_at = Column(DateTime(timezone=True))
+    last_forced_update = Column(DateTime(timezone=True))
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     other_titles = relationship(
         "OtherTitle", back_populates="anime", cascade="all, delete"
@@ -170,7 +173,7 @@ class Avatar(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     label = Column(String(255), nullable=False)
     url = Column(String(255), nullable=False)
-    created_at = Column(TIMESTAMP, default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     users = relationship("User", back_populates="avatar")
 
@@ -190,8 +193,9 @@ class User(Base):
         nullable=False,
     )
     is_active = Column(Boolean, default=True)
-    created_at = Column(TIMESTAMP, default=func.now())
-    updated_at = Column(TIMESTAMP, default=func.now())
+    timezone = Column(String(50), default="UTC")
+    updated_at = Column(DateTime(timezone=True), default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     saves = relationship(
         "UserSaveAnime", back_populates="user", cascade="all, delete"
@@ -203,7 +207,7 @@ class User(Base):
     api_keys = relationship(
         "ApiKey", back_populates="user", cascade="all, delete"
     )
-    avatar = relationship("Avatar", back_populates="users")
+    avatar = relationship("Avatar", back_populates="users", lazy="joined")
 
 
 class UserSaveAnime(Base):
@@ -219,7 +223,7 @@ class UserSaveAnime(Base):
         ForeignKey("animes.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    created_at = Column(TIMESTAMP, default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="saves")
     anime = relationship("Anime", back_populates="saves")
@@ -238,7 +242,7 @@ class UserDownloadEpisode(Base):
         ForeignKey("episodes.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    created_at = Column(TIMESTAMP, default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="downloads")
     episode = relationship("Episode", back_populates="downloads")
@@ -261,7 +265,8 @@ class ApiKey(Base):
         nullable=False,
     )
     key = Column(String(255), unique=True, nullable=False)
-    created_at = Column(TIMESTAMP, default=func.now())
-    expired_at = Column(TIMESTAMP)
+    expired_at = Column(DateTime(timezone=True))
+    last_used_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="api_keys")

@@ -40,10 +40,9 @@ from utils.exceptions import (
 )
 from .config import anime_settings
 
+REDIS_URL = anime_settings.REDIS_URL
 
 animes_router = APIRouter()
-
-REDIS_URL = anime_settings.REDIS_URL
 
 
 @animes_router.get(
@@ -58,12 +57,15 @@ async def get_anime(
     anime_id: str,
     request: Request,
     response: Response,
+    force_update: bool = False,
     current_user: dict = Depends(auth_scheme),
 ):
     request.state.func = "get_anime"
     try:
         logger.info(f"Getting anime with id: {anime_id}")
-        status, data = await get_anime_controller(anime_id, current_user["id"])
+        status, data = await get_anime_controller(
+            anime_id, current_user["id"], force_update
+        )
 
         response.status_code = status
 
@@ -421,6 +423,7 @@ async def download_anime(
     episode_number: int,
     request: Request,
     response: Response,
+    force_download: bool = False,
     current_user: dict = Depends(auth_scheme),
 ):
     request.state.func = "download_anime"
@@ -431,6 +434,7 @@ async def download_anime(
         status, data = await download_anime_controller(
             anime_id,
             episode_number,
+            force_download,
             current_user["id"],
             request.state.request_id,
         )

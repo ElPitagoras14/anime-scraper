@@ -39,7 +39,7 @@
       "command": "${workspaceFolder}/queue/venv/Scripts/python",
       "args": ["main.py"],
       "options": {
-        "cwd": "${workspaceFolder}/queues/src"
+        "cwd": "${workspaceFolder}/queue/src"
       }
     },
     {
