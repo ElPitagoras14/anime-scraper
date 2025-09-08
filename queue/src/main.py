@@ -49,7 +49,7 @@ celery_app.conf.update(
 
 
 @worker_ready.connect
-def on_worker_ready():
+def on_worker_ready(**kwargs):
     logger.info("Celery workers are ready")
 
 
