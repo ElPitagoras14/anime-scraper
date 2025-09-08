@@ -262,7 +262,7 @@ def download_anime(
     except Exception as e:
         logger.error(f"Error downloading {anime_id} - {episode_number}: {e}")
 
-        if self.request.retries > MAX_DOWNLOAD_RETRIES:
+        if self.request.retries >= MAX_DOWNLOAD_RETRIES:
             logger.error(
                 f"Max retries exceeded for {anime_id} - {episode_number}"
             )
@@ -291,7 +291,7 @@ def download_anime(
             },
         )
 
-        raise self.retry(countdown=countdown, exc=e)
+        raise self.retry(countdown=countdown, exc=e, throw=False)
 
 
 if __name__ == "__main__":

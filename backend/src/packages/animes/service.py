@@ -1,9 +1,11 @@
+import asyncio
 from datetime import datetime, timezone, timedelta
 import os
 from ani_scrapy.async_api import JKAnimeScraper
 from loguru import logger
 from sqlalchemy import desc
 from starlette import status
+from sqlalchemy.dialects.postgresql import insert
 
 from worker import celery_app
 from utils.exceptions import NotFoundException, ConflictException
@@ -77,70 +79,102 @@ def get_anime_info_to_dict(
 async def add_new_anime(db: DatabaseSession, base_url: str, anime_id: str):
     logger.debug(f"Adding anime to database: {anime_id}")
     anime_info = await scraper.get_anime_info(anime_id, tab_timeout=300)
-    week_day = None
-    if anime_info.next_episode_date:
-        week_day = anime_info.next_episode_date.strftime("%A")
-
-    new_anime = Anime(
-        id=anime_info.id,
-        title=anime_info.title,
-        description=anime_info.synopsis,
-        poster=anime_info.poster,
-        type=anime_info.type.value,
-        is_finished=anime_info.is_finished,
-        week_day=week_day,
-        last_scraped_at=datetime.now(timezone.utc),
-        last_forced_update=datetime.now(timezone.utc),
+    week_day = (
+        anime_info.next_episode_date.strftime("%A")
+        if anime_info.next_episode_date
+        else None
     )
-    db.add(new_anime)
-    db.flush()
-    logger.debug(f"Added anime to database: {anime_info.id}")
+    current_time = datetime.now(timezone.utc)
 
-    for genre in anime_info.genres:
-        new_genre = Genre(
-            anime_id=anime_info.id,
-            name=genre,
+    stmt = (
+        insert(Anime)
+        .values(
+            id=anime_info.id,
+            title=anime_info.title,
+            description=anime_info.synopsis,
+            poster=anime_info.poster,
+            type=anime_info.type.value,
+            is_finished=anime_info.is_finished,
+            week_day=week_day,
+            last_scraped_at=current_time,
+            last_forced_update=current_time,
         )
-        db.add(new_genre)
+        .on_conflict_do_update(
+            index_elements=["id"],
+            set_={
+                "title": anime_info.title,
+                "description": anime_info.synopsis,
+                "poster": anime_info.poster,
+                "type": anime_info.type.value,
+                "is_finished": anime_info.is_finished,
+                "week_day": week_day,
+                "last_scraped_at": current_time,
+                "last_forced_update": current_time,
+            },
+        )
+    )
+    db.execute(stmt)
+    logger.debug(f"Upserted anime: {anime_info.id}")
 
-    logger.debug("Added genres to database")
+    genre_values = [
+        {"anime_id": anime_info.id, "name": g} for g in anime_info.genres
+    ]
+    if genre_values:
+        stmt = insert(Genre).values(genre_values).on_conflict_do_nothing()
+        db.execute(stmt)
+    logger.debug("Inserted genres")
 
     for related in anime_info.related_info:
-        check_related = db.query(Anime).where(Anime.id == related.id).first()
-        if not check_related:
-            new_dummy_anime = Anime(
-                id=related.id,
-                title=related.title,
+        stmt_anime = (
+            insert(Anime)
+            .values(id=related.id, title=related.title)
+            .on_conflict_do_nothing(index_elements=["id"])
+        )
+        db.execute(stmt_anime)
+
+        stmt_relation = (
+            insert(AnimeRelation)
+            .values(
+                anime_id=anime_info.id,
+                related_anime_id=related.id,
+                type_related_id=related_types_id[related.type.value],
             )
-            db.add(new_dummy_anime)
-            db.flush()
-        new_anime_relation = AnimeRelation(
-            anime_id=anime_info.id,
-            related_anime_id=related.id,
-            type_related_id=related_types_id[related.type.value],
+            .on_conflict_do_nothing()
         )
-        db.add(new_anime_relation)
+        db.execute(stmt_relation)
+    logger.debug("Inserted related animes")
 
-    logger.debug("Added related animes to database")
-
-    for title in anime_info.other_titles:
-        new_title = OtherTitle(
-            anime_id=anime_info.id,
-            name=title,
+    other_titles_values = [
+        {"anime_id": anime_info.id, "name": t} for t in anime_info.other_titles
+    ]
+    if other_titles_values:
+        stmt = (
+            insert(OtherTitle)
+            .values(other_titles_values)
+            .on_conflict_do_nothing(index_elements=["anime_id", "name"])
         )
-        db.add(new_title)
+        db.execute(stmt)
+    logger.debug("Inserted other titles")
 
-    for episode in anime_info.episodes:
-        new_episode = Episode(
-            anime_id=anime_info.id,
-            ep_number=episode.id,
-            preview=episode.image_preview,
-            url=f"{base_url}/{episode.id}",
+    episode_values = [
+        {
+            "anime_id": anime_info.id,
+            "ep_number": ep.number,
+            "preview": ep.image_preview,
+            "url": f"{base_url}/{ep.number}",
+        }
+        for ep in anime_info.episodes
+    ]
+    if episode_values:
+        stmt = (
+            insert(Episode)
+            .values(episode_values)
+            .on_conflict_do_nothing(index_elements=["anime_id", "ep_number"])
         )
-        db.add(new_episode)
+        db.execute(stmt)
+    logger.debug("Inserted episodes")
+
     db.flush()
-
-    logger.debug("Added episodes to database")
 
 
 async def get_anime_controller(
@@ -148,104 +182,68 @@ async def get_anime_controller(
 ) -> tuple[int, dict]:
     logger.debug(f"Getting anime with id: {anime_id}")
     base_url = f"https://jkanime.net/{anime_id}"
+    current_time = datetime.now(timezone.utc)
+
     with DatabaseSession() as db:
         anime_db = db.query(Anime).where(Anime.id == anime_id).first()
-        if not anime_db:
+
+        # --- Scenario 1: Anime does not exist or dummy row ---
+        if not anime_db or not anime_db.last_scraped_at:
+            logger.debug("Anime not in DB or dummy row found")
             await add_new_anime(db, base_url, anime_id)
+            anime_db = db.query(Anime).where(Anime.id == anime_id).first()
+
+        # --- Scenario 2: Anime exists, check if update is needed ---
         else:
-            if not anime_db.last_scraped_at:
-                logger.debug("Dummy anime inserted, updating")
-                anime_info = await scraper.get_anime_info(
-                    anime_id, tab_timeout=300
-                )
-                week_day = None
-                if anime_info.next_episode_date:
-                    week_day = anime_info.next_episode_date.strftime("%A")
-
-                anime_db.description = anime_info.synopsis
-                anime_db.poster = anime_info.poster
-                anime_db.type = anime_info.type.value
-                anime_db.last_scraped_at = datetime.now(timezone.utc)
-                anime_db.last_forced_update = datetime.now(timezone.utc)
-                anime_db.is_finished = anime_info.is_finished
-                anime_db.week_day = week_day
-
-                db.add(anime_db)
-                logger.debug(f"Added anime to database: {anime_info.id}")
-
-                for genre in anime_info.genres:
-                    new_genre = Genre(
-                        anime_id=anime_info.id,
-                        name=genre,
-                    )
-                    db.add(new_genre)
-
-                for related in anime_info.related_info:
-                    check_related = (
-                        db.query(Anime).where(Anime.id == related.id).first()
-                    )
-                    if not check_related:
-                        new_dummy_anime = Anime(
-                            id=related.id,
-                            title=related.title,
-                        )
-                        db.add(new_dummy_anime)
-                        db.flush()
-                    new_anime_relation = AnimeRelation(
-                        anime_id=anime_info.id,
-                        related_anime_id=related.id,
-                        type_related_id=related_types_id[related.type.value],
-                    )
-                    db.add(new_anime_relation)
-
-                logger.debug("Added genres and related animes to database")
-
-                for episode in anime_info.episodes:
-                    new_episode = Episode(
-                        anime_id=anime_info.id,
-                        ep_number=episode.id,
-                        preview=episode.image_preview,
-                        url=f"{base_url}/{episode.id}",
-                    )
-                    db.add(new_episode)
-                db.flush()
-                logger.debug("Added episodes to database")
-
-            logger.debug(f"Found anime in database: {anime_db.id}")
-
-            last_scraped_at = anime_db.last_scraped_at
-            last_scraped_at_aware = last_scraped_at.replace(
+            last_scraped_at_aware = anime_db.last_scraped_at.replace(
                 tzinfo=timezone.utc
             )
-            current_time = datetime.now(timezone.utc)
-
             if force_update or last_scraped_at_aware < (
                 current_time - timedelta(hours=1)
             ):
-                logger.debug("Old anime info, updating")
-                anime = await scraper.get_anime_info(anime_id)
+                logger.debug("Updating anime info")
+
+                # Scrape only general info, without episodes
+                anime_info = await scraper.get_anime_info(
+                    anime_id, include_episodes=False
+                )
+                anime_db.title = anime_info.title
+                anime_db.description = anime_info.synopsis
+                anime_db.poster = anime_info.poster
+                anime_db.type = anime_info.type.value
+                anime_db.is_finished = anime_info.is_finished
+                anime_db.week_day = (
+                    anime_info.next_episode_date.strftime("%A")
+                    if anime_info.next_episode_date
+                    else None
+                )
                 anime_db.last_scraped_at = current_time
                 anime_db.last_forced_update = current_time
-                anime_db.is_finished = anime.is_finished
+                db.add(anime_db)
 
-                num_anime_episodes = len(anime.episodes)
-                num_db_episodes = len(anime_db.episodes)
+                # --- Scrape only new episodes ---
+                await asyncio.sleep(1.5)
+                last_ep_number = max(
+                    [ep.ep_number for ep in anime_db.episodes], default=0
+                )
+                print(last_ep_number)
+                new_episodes = await scraper.get_new_episodes(
+                    anime_id, last_ep_number
+                )
+                for ep in new_episodes:
+                    new_episode = Episode(
+                        anime_id=anime_id,
+                        ep_number=ep.number,
+                        preview=ep.image_preview,
+                        url=f"{base_url}/{ep.number}",
+                    )
+                    db.add(new_episode)
+                db.flush()
+                logger.debug(
+                    f"Added {len(new_episodes)} new episodes to database"
+                )
 
-                if num_anime_episodes > num_db_episodes:
-                    logger.debug("Updating episodes")
-                    for idx in range(num_db_episodes, num_anime_episodes):
-                        episode = anime.episodes[idx]
-                        new_episode = Episode(
-                            anime_id=anime_id,
-                            ep_number=episode.id,
-                            preview=episode.image_preview,
-                            url=f"{base_url}/{episode.id}",
-                        )
-                        db.add(new_episode)
-                    db.flush()
-                    logger.debug("Added episodes to database")
-
-        anime_db = db.query(Anime).where(Anime.id == anime_id).first()
+        # --- User info ---
         saved_anime = (
             db.query(UserSaveAnime)
             .where(
@@ -254,7 +252,8 @@ async def get_anime_controller(
             )
             .first()
         )
-        episode_ids = [episode.id for episode in anime_db.episodes]
+
+        episode_ids = [ep.id for ep in anime_db.episodes]
         downloaded_user_episodes = (
             db.query(UserDownloadEpisode)
             .filter(
@@ -263,31 +262,34 @@ async def get_anime_controller(
             )
             .all()
         )
-        downloaded_user_episodes_ids = [
-            episode_download.episode_id
-            for episode_download in downloaded_user_episodes
-        ]
-        downloaded_global_epusodes = (
+        downloaded_global_episodes = (
             db.query(UserDownloadEpisode)
-            .filter(
-                UserDownloadEpisode.episode_id.in_(episode_ids),
-            )
+            .filter(UserDownloadEpisode.episode_id.in_(episode_ids))
             .all()
         )
-        downloaded_global_episodes_ids = [
-            episode_download.episode_id
-            for episode_download in downloaded_global_epusodes
-        ]
+
         saved_anime_info = {
             "is_saved": saved_anime is not None,
             "save_date": saved_anime.created_at if saved_anime else None,
         }
+
+        downloaded_user_episodes_ids = [
+            ep.episode_id for ep in downloaded_user_episodes
+        ]
+        downloaded_global_episodes_ids = [
+            ep.episode_id for ep in downloaded_global_episodes
+        ]
+
+        db.commit()
+        anime_db = db.query(Anime).where(Anime.id == anime_id).first()
+
         new_anime_info = get_anime_info_to_dict(
             anime_db,
             downloaded_user_episodes_ids,
             downloaded_global_episodes_ids,
         )
         casted_anime = cast_anime_info(new_anime_info, saved_anime_info)
+
         return status.HTTP_200_OK, casted_anime
 
 
@@ -402,7 +404,9 @@ async def get_in_emission_animes_controller(user_id: str) -> tuple[int, dict]:
             db.query(UserSaveAnime)
             .join(UserSaveAnime.anime)
             .where(
-                UserSaveAnime.user_id == user_id, Anime.week_day.isnot(None)
+                UserSaveAnime.user_id == user_id,
+                Anime.week_day.isnot(None),
+                Anime.is_finished.is_(False),
             )
             .all()
         )
@@ -596,6 +600,67 @@ async def download_anime_controller(
         logger.debug(f"Enqueued download with job id: {result.id}")
 
         return status.HTTP_201_CREATED, cast_job_id(result.id)
+
+
+async def delete_download_episode_controller(
+    anime_id: str, episode_id: int, user_id: str, request_id: str
+) -> tuple[int, str]:
+    logger.debug(f"Deleting download episode with id: {episode_id}")
+    with DatabaseSession() as db:
+        episode = (
+            db.query(Episode)
+            .filter(
+                Episode.anime_id == anime_id,
+                Episode.ep_number == episode_id,
+            )
+            .first()
+        )
+        if not episode:
+            raise NotFoundException("Episode not found", request_id=request_id)
+
+        download = (
+            db.query(UserDownloadEpisode)
+            .filter(
+                UserDownloadEpisode.episode_id == episode.id,
+                UserDownloadEpisode.user_id == user_id,
+            )
+            .first()
+        )
+        if not download:
+            raise NotFoundException(
+                "Download not found", request_id=request_id
+            )
+
+        db.delete(download)
+        db.flush()
+
+        users_downloads = (
+            db.query(UserDownloadEpisode)
+            .filter(
+                UserDownloadEpisode.episode_id == episode.id,
+            )
+            .count()
+        )
+
+        if users_downloads == 0:
+            parsed_season = str(episode.anime.season).zfill(2)
+            anime_folder = (
+                f"{ANIMES_FOLDER}/{episode.anime_id}/Season {parsed_season}"
+            )
+            if not os.path.exists(anime_folder):
+                return status.HTTP_404_NOT_FOUND, "Episode not found"
+
+            parsed_episode_number = str(episode.ep_number).zfill(2)
+            file_path = (
+                f"{anime_folder}/{episode.anime_id} - S{parsed_season}E"
+                + f"{parsed_episode_number}.mp4"
+            )
+            if os.path.exists(file_path):
+                os.remove(file_path)
+
+        logger.debug(f"Deleted download episode with id: {episode_id}")
+
+        return status.HTTP_200_OK, "Episode deleted successfully"
 
 
 async def download_anime_bulk_controller(

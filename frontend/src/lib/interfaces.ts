@@ -25,3 +25,16 @@ export type FieldInfo = TextField | NumberField | PasswordField;
 export interface FormField extends FieldBase {
   validation: z.ZodType;
 }
+
+export type EpisodeDownload = {
+  id: number;
+  animeId: string;
+  title: string;
+  episodeNumber: number;
+  poster: string;
+  jobId: string | null;
+  size: number | null;
+  status: string;
+  downloadedAt: string;
+  progress: number;
+};

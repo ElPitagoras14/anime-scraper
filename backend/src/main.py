@@ -10,6 +10,7 @@ from utils.exception_handlers import (
     custom_http_exception_handler,
     general_exception_handler,
 )
+from scalar_fastapi import get_scalar_api_reference
 from utils.exceptions import CustomHTTPException
 from log import configure_logs
 from config import general_settings
@@ -91,6 +92,14 @@ app.include_router(router, prefix="/api")
 @app.get("/api/health")
 async def health_check():
     return {"status": "healthy", "version": version, "service": "Ani Seek API"}
+
+
+@app.get("/scalar", include_in_schema=False)
+async def scalar_html():
+    return get_scalar_api_reference(
+        openapi_url=app.openapi_url,
+        title=app.title,
+    )
 
 
 def start():

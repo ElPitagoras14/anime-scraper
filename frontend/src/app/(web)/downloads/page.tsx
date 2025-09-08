@@ -1,10 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { getAnimeColumns, EpisodeDownload } from "./components/columns";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
-import { useEffect, useRef, useState } from "react";
-import { DataTable } from "@/components/data-table/data-table";
+import { useEffect, useState } from "react";
 import {
   Popover,
   PopoverContent,
@@ -23,6 +21,10 @@ import {
 import { cn } from "@/lib/utils";
 import { PaginationState, SortingState } from "@tanstack/react-table";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { useDownloadProgress } from "@/providers/progress-provider";
+import { EpisodeDownload } from "@/lib/interfaces";
+import { DownloadTable } from "./components/table/download-table";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -72,6 +74,35 @@ const getUniqueAnimes = () => {
   return apiClient(options);
 };
 
+interface ForceDownloadParams {
+  animeId: string;
+  episodeNumber: number;
+}
+
+const forceDownload = ({ animeId, episodeNumber }: ForceDownloadParams) => {
+  const options = {
+    method: "POST",
+    url: `/animes/download/single/${animeId}/${episodeNumber}`,
+    params: {
+      force_download: true,
+    },
+  };
+  return apiClient(options);
+};
+
+interface DeleteDownloadParams {
+  animeId: string;
+  episodeNumber: number;
+}
+
+const deleteDownload = ({ animeId, episodeNumber }: DeleteDownloadParams) => {
+  const options = {
+    method: "DELETE",
+    url: `/animes/download/single/${animeId}/${episodeNumber}`,
+  };
+  return apiClient(options);
+};
+
 interface Anime {
   id: string;
   title: string;
@@ -79,7 +110,7 @@ interface Anime {
 
 export default function Downloads() {
   const [open, setOpen] = useState<boolean>(false);
-  const [animeId, setAnimeId] = useState("");
+  const [animeId, setAnimeId] = useState<string>("");
   const [sorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -87,6 +118,8 @@ export default function Downloads() {
   });
 
   const { data: session } = useSession();
+  const { user } = session || {};
+  const { setJobIds } = useDownloadProgress();
 
   const queryParams = {
     pagination,
@@ -99,91 +132,66 @@ export default function Downloads() {
     refetchOnWindowFocus: false,
   });
 
-  const { data: serverData, isLoading } = useQuery({
+  const {
+    data: serverData,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["downloads", animeId, queryParams],
     queryFn: () => getDownloads(animeId, queryParams),
     refetchOnWindowFocus: false,
   });
 
-  const [localData, setLocalData] = useState<EpisodeDownload[] | null>(
-    serverData?.data?.payload?.items
-  );
-
-  const jobsMapRef = useRef<Record<string, number>>({});
-
-  const items = serverData?.data?.payload?.items;
   const animes = animesData?.data?.payload?.items;
 
-  const animeColumns = getAnimeColumns({
-    role: session?.user?.role || "guest",
+  const forceDownloadMutation = useMutation({
+    mutationFn: forceDownload,
+    onSuccess: async () => {
+      await refetch();
+    },
   });
+
+  const handleForceDownload = async (
+    animeId: string,
+    episodeNumber: number
+  ) => {
+    forceDownloadMutation.mutate({
+      animeId,
+      episodeNumber,
+    });
+  };
+
+  const deleteDownloadMutation = useMutation({
+    mutationFn: deleteDownload,
+    onSuccess: async (_, values) => {
+      await refetch();
+      toast.success(
+        `Episode ${values.animeId} - ${values.episodeNumber} deleted`
+      );
+    },
+  });
+
+  const handleDeleteDownload = async (
+    animeId: string,
+    episodeNumber: number
+  ) => {
+    deleteDownloadMutation.mutate({
+      animeId,
+      episodeNumber,
+    });
+  };
 
   useEffect(() => {
     if (!serverData) return;
-    setLocalData(serverData?.data?.payload?.items);
-    const jobIds: string[] = [];
-    const rawJobsMap: Record<string, number> = {};
 
-    items.forEach((episode: EpisodeDownload, idx: number) => {
-      if (episode.jobId) {
-        jobIds.push(episode.jobId);
-        rawJobsMap[episode.jobId] = idx;
-      }
-    });
+    const items = serverData?.data?.payload?.items;
 
-    jobsMapRef.current = rawJobsMap;
+    const jobIds = items
+      .filter((episode: EpisodeDownload) => episode.jobId)
+      .map((episode: EpisodeDownload) => episode.jobId as string);
 
-    const source = new EventSource(
-      `${API_URL}/api/animes/stream/download?job_ids=${jobIds.join(",")}`
-    );
-
-    source.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const { job_id, state, meta } = data;
-        const idx = jobsMapRef.current[job_id];
-        if (state !== localData?.[idx].status) {
-          setLocalData((prevData) => {
-            if (!prevData) return prevData;
-            const newData = [...prevData];
-            newData[idx] = {
-              ...newData[idx],
-              status: state,
-            };
-            return newData;
-          });
-        }
-        if (meta.total) {
-          const total = meta.total;
-          const progress = meta.progress;
-          if (idx !== undefined) {
-            setLocalData((prevData) => {
-              if (!prevData) return prevData;
-              const newData = [...prevData];
-              newData[idx] = {
-                ...newData[idx],
-                size: total,
-                progress,
-              };
-              return newData;
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error parsing JSON:", error);
-      }
-    };
-
-    source.onerror = (error) => {
-      console.error("Error:", error);
-      source.close();
-    };
-
-    return () => {
-      source.close();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverData]);
+    setJobIds(jobIds);
+  }, [serverData, setJobIds]);
 
   return (
     <div className="flex flex-col gap-y-10">
@@ -237,17 +245,16 @@ export default function Downloads() {
             </PopoverContent>
           </Popover>
         </div>
-        <DataTable
-          columns={animeColumns}
-          data={localData || []}
-          enableSelect={false}
-          serverSide={{
-            pagination: {
-              value: pagination,
-              onChange: setPagination,
-            },
-            totalRows: serverData?.data?.payload?.total,
-            isLoading,
+        <DownloadTable
+          data={serverData?.data?.payload?.items || []}
+          role={user?.role || "guest"}
+          isLoading={isLoading}
+          handleForceDownload={handleForceDownload}
+          handleDeleteDownload={handleDeleteDownload}
+          serverInfo={{
+            total: serverData?.data?.payload?.total || 0,
+            pagination,
+            setPagination,
           }}
         />
       </div>

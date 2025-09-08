@@ -47,7 +47,7 @@ export default function Navbar() {
         <TelescopeIcon className="w-8 h-8" />
         <span
           className="text-2xl font-semibold cursor-pointer"
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/home")}
         >
           Ani Seek
         </span>
