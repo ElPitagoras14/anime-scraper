@@ -1,0 +1,22 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10.14"
+dependencies = [
+    "ani-scrapy>=0.1.15",
+    "bcrypt>=4.0,<4.1",
+    "celery>=5.5.3",
+    "fastapi[standard]>=0.119.0",
+    "loguru>=0.7.3",
+    "passlib<1.8",
+    "psycopg2>=2.9.11",
+    "pydantic-settings>=2.11.0",
+    "python-jose>=3.5.0",
+    "redis>=6.4.0",
+    "scalar-fastapi>=1.4.3",
+    "sqlalchemy>=2.0.44",
+    "uvicorn>=0.37.0",
+    "watchgod>=0.8.2",
+]

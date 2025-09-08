@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     TIMESTAMP,
     CheckConstraint,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -106,13 +107,14 @@ class Anime(Base):
 class OtherTitle(Base):
     __tablename__ = "other_titles"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
     anime_id = Column(
         String(255),
         ForeignKey("animes.id", ondelete="CASCADE"),
+        primary_key=True,
         nullable=False,
     )
-    name = Column(String, nullable=False)
+    name = Column(String, primary_key=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     anime = relationship("Anime", back_populates="other_titles")
 
@@ -120,13 +122,13 @@ class OtherTitle(Base):
 class Genre(Base):
     __tablename__ = "genres"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
     anime_id = Column(
         String(255),
         ForeignKey("animes.id", ondelete="CASCADE"),
+        primary_key=True,
         nullable=False,
     )
-    name = Column(String(255), nullable=False)
+    name = Column(String(255), primary_key=True, nullable=False)
 
     anime = relationship("Anime", back_populates="genres")
 
@@ -153,6 +155,14 @@ class Episode(Base):
     job_id = Column(String)
     status = Column(String)
     size = Column(Integer)
+    created_at = Column(String, server_default="CURRENT_TIMESTAMP")
+    updated_at = Column(String, server_default="CURRENT_TIMESTAMP")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "anime_id", "ep_number", name="uq_episode_anime_number"
+        ),
+    )
 
     anime = relationship("Anime", back_populates="episodes")
     downloads = relationship(

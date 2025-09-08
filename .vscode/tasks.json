@@ -19,8 +19,8 @@
     {
       "label": "Run Backend",
       "type": "shell",
-      "command": "${workspaceFolder}/backend/venv/Scripts/python",
-      "args": ["main.py"],
+      "command": "uv",
+      "args": ["run", "main.py"],
       "options": {
         "cwd": "${workspaceFolder}/backend/src"
       }
@@ -36,8 +36,8 @@
     {
       "label": "Run Celery",
       "type": "shell",
-      "command": "${workspaceFolder}/queue/venv/Scripts/python",
-      "args": ["main.py"],
+      "command": "uv",
+      "args": ["run", "main.py"],
       "options": {
         "cwd": "${workspaceFolder}/queue/src"
       }
@@ -45,10 +45,10 @@
     {
       "label": "Run Flower",
       "type": "shell",
-      "command": "${workspaceFolder}/queue/venv/Scripts/celery",
-      "args": ["-A", "main", "flower", "--port=5555"],
+      "command": "uv",
+      "args": ["run", "celery", "-A", "main", "flower", "--port=5555"],
       "options": {
-        "cwd": "${workspaceFolder}/queues/src"
+        "cwd": "${workspaceFolder}/queue/src"
       }
     },
     {

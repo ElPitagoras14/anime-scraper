@@ -13,6 +13,7 @@ from utils.responses import (
 )
 from packages.auth import auth_scheme
 from .service import (
+    delete_download_episode_controller,
     download_anime_bulk_controller,
     download_anime_controller,
     get_download_episode_controller,
@@ -393,7 +394,7 @@ async def get_download_episode(
             media_type="application/octet-stream",
             headers={
                 "Content-Disposition": "attachment; "
-                + f"filename={data["filename"]}"
+                + f"filename={data['filename']}"
             },
         )
 
@@ -452,6 +453,51 @@ async def download_anime(
     except Exception as e:
         logger.error(
             f"Error downloading anime {anime_id} - {episode_number}: {e}"
+        )
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
+            )
+        raise
+
+
+@animes_router.delete(
+    "/download/single/{anime_id}/{episode_number}",
+    responses={
+        200: {"model": SuccessResponse},
+        409: {"model": ConflictResponse},
+        500: {"model": InternalServerErrorResponse},
+    },
+)
+async def delete_download_episode(
+    anime_id: str,
+    episode_number: int,
+    request: Request,
+    response: Response,
+    current_user: dict = Depends(auth_scheme),
+):
+    request.state.func = "delete_download_episode"
+    try:
+        logger.info(f"Deleting download episode with id: {episode_number}")
+        status, _ = await delete_download_episode_controller(
+            anime_id,
+            episode_number,
+            current_user["id"],
+            request.state.request_id,
+        )
+
+        response.status_code = status
+
+        response_data = APIResponse(
+            success=True,
+            message="Download episode deleted successfully",
+            func="delete_download_episode",
+        )
+
+        return response_data
+    except Exception as e:
+        logger.error(
+            f"Error deleting download episode with id: {episode_number}: {e}"
         )
         if not isinstance(e, (NotFoundException, ConflictException)):
             raise InternalServerErrorException(

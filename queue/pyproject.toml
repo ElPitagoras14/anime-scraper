@@ -1,0 +1,17 @@
+[project]
+name = "queue"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10.14"
+dependencies = [
+    "ani-scrapy>=0.1.15",
+    "celery>=5.5.3",
+    "dotenv>=0.9.9",
+    "flower>=2.0.1",
+    "psycopg2>=2.9.11",
+    "pydantic-settings>=2.11.0",
+    "redis>=6.4.0",
+    "requests>=2.32.5",
+    "sqlalchemy>=2.0.44",
+]

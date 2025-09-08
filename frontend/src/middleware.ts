@@ -13,7 +13,7 @@ export default auth(async (req) => {
   });
   const baseUrl = req.nextUrl.origin;
 
-  if (unprotectedPaths.includes(req.nextUrl.pathname)) {
+  if (unprotectedPaths.includes(req.nextUrl.pathname) && !token) {
     return NextResponse.next();
   }
 
@@ -27,6 +27,10 @@ export default auth(async (req) => {
     response.cookies.set("next-auth.csrf-token", "", { maxAge: 0 });
 
     return response;
+  }
+
+  if (["/login", "/register"].includes(req.nextUrl.pathname)) {
+    return NextResponse.redirect(`${baseUrl}/home`);
   }
 
   // If authenticated, continue with the request
