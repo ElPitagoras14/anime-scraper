@@ -158,7 +158,7 @@ wheels = [
 
 [[package]]
 name = "ani-scrapy"
-version = "0.1.15"
+version = "0.1.18"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -171,9 +171,9 @@ dependencies = [
     { name = "playwright-stealth" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5a/35/04cde4f1b8288c6b8f091543ecdeb28405ecf093a7ea1d30ef755adc17db/ani_scrapy-0.1.15.tar.gz", hash = "sha256:789d47689440e1082bf68ab86c53c9c2797324d2a4cfe5dcfb587661b5422aec", size = 30114, upload-time = "2025-10-14T03:03:14.366Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5d/45/e30de2132a2d190d90896f57802f7be34a114e7ea91b176313cb03c26ed9/ani_scrapy-0.1.18.tar.gz", hash = "sha256:f1f8d4b660b59f8bf79076a7996e22fb92f6c48feb1dc6168fbf47e1927aee15", size = 30543, upload-time = "2025-10-15T22:44:09.223Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/75/c7/7df43eeeca7208b3c4563395488282661177181c8b95eb5350732baac528/ani_scrapy-0.1.15-py3-none-any.whl", hash = "sha256:a3e29fd3ed9a20ddb9b02428dd1b19004c1ec6fecf46ba6bc79bcc57494a9b8a", size = 35376, upload-time = "2025-10-14T03:03:13.351Z" },
+    { url = "https://files.pythonhosted.org/packages/93/ca/69151e138145eb7f035e9d571108fefd590b7b2c1708b24858fdad0ce024/ani_scrapy-0.1.18-py3-none-any.whl", hash = "sha256:91d8d35a9fe0a20d5950ba3038a3b8883eb13ba00faee95385b9b96432fcadc2", size = 35557, upload-time = "2025-10-15T22:44:08.095Z" },
 ]
 
 [[package]]
@@ -1218,6 +1218,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/00/e9/3916abb671bffb00845408c604ff03480dc8dc273310d8268547a37be0fb/pydantic_core-2.41.3.tar.gz", hash = "sha256:cdebb34b36ad05e8d77b4e797ad38a2a775c2a07a8fa386d4f6943b7778dcd39", size = 457489, upload-time = "2025-10-13T19:34:51.666Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/79/01/8346969d4eef68f385a7cf6d9d18a6a82129177f2ac9ea36cc2cec4a7b3a/pydantic_core-2.41.3-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:1a572d7d06b9fa6efeec32fbcd18c73081af66942b345664669867cf8e69c7b0", size = 2110164, upload-time = "2025-10-13T19:30:43.025Z" },
     { url = "https://files.pythonhosted.org/packages/60/7d/7ac0e48368c67c1ce3b34ceae1949c780381ad45ae3662f4e63a3d9a1a51/pydantic_core-2.41.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:63d787ea760052585c6bfc34310aa379346f2cec363fe178659664f80421804b", size = 1919153, upload-time = "2025-10-13T19:30:44.783Z" },
@@ -1407,7 +1408,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ani-scrapy", specifier = ">=0.1.15" },
+    { name = "ani-scrapy", specifier = "==0.1.18" },
     { name = "celery", specifier = ">=5.5.3" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "flower", specifier = ">=2.0.1" },
