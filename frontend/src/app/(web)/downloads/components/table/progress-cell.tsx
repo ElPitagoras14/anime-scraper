@@ -7,6 +7,8 @@ import { DownloadIcon } from "lucide-react";
 import { useJobProgress } from "@/hooks/use-job-progress";
 import { memo } from "react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 interface ProgressCellProps {
   status: string;
   progress: number;
@@ -44,7 +46,7 @@ export const ProgressCell = memo(
             size="icon"
             disabled={role !== "admin" && role !== "member"}
             onClick={() =>
-              (window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/animes/download/episode/${id}`)
+              (window.location.href = `${API_URL}/api/animes/download/episode/${id}`)
             }
             className="cursor-pointer"
           >

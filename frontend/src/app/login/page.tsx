@@ -21,6 +21,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Spinner } from "@/components/ui/spinner";
 
 const fields: FormField[] = [
   {
@@ -156,7 +157,7 @@ export default function Login() {
             </div>
             <Button type="button" className="cursor-pointer" onClick={onSubmit}>
               Login{" "}
-              {isLoading && <Icons.spinner className="animate-spin size-5" />}
+              {isLoading && <Spinner className="size-5" />}
             </Button>
             <div className="flex justify-center gap-4">
               <Link

@@ -69,8 +69,7 @@ export function DownloadTable({
                 </TableCell>
               </TableRow>
             ) : (
-              data &&
-              data.map((row) => (
+              data?.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell>
                     <div className="flex justify-center">

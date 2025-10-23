@@ -1,11 +1,12 @@
 import asyncio
-from datetime import datetime, timezone, timedelta
 import os
+from datetime import datetime, timezone, timedelta
 from ani_scrapy.async_api import JKAnimeScraper
 from loguru import logger
 from sqlalchemy import desc
 from starlette import status
 from sqlalchemy.dialects.postgresql import insert
+from urllib.parse import unquote
 
 from worker import celery_app
 from utils.exceptions import NotFoundException, ConflictException
@@ -226,7 +227,6 @@ async def get_anime_controller(
                 last_ep_number = max(
                     [ep.ep_number for ep in anime_db.episodes], default=0
                 )
-                print(last_ep_number)
                 new_episodes = await scraper.get_new_episodes(
                     anime_id, last_ep_number
                 )
@@ -295,6 +295,7 @@ async def get_anime_controller(
 
 async def search_anime_controller(query: str, user_id: str):
     logger.debug(f"Searching for {query}")
+    query = unquote(query)
     animes = await scraper.search_anime(query)
     logger.debug(f"Found {len(animes.animes)} animes")
 
@@ -428,7 +429,7 @@ async def get_in_emission_animes_controller(user_id: str) -> tuple[int, dict]:
         return status.HTTP_200_OK, casted_animes
 
 
-async def get_downloads_controller(
+async def get_download_episodes_controller(
     user_id: str, anime_id: str | None = None, limit: int = 10, page: int = 1
 ) -> tuple[int, dict]:
     logger.debug("Getting downloads")
@@ -472,6 +473,37 @@ async def get_downloads_controller(
         )
 
     return status.HTTP_200_OK, casted_episode_downloads
+
+
+async def get_last_downloaded_episodes_controller(
+    user_id: str,
+) -> tuple[int, dict]:
+    logger.debug("Getting last downloaded episodes")
+    with DatabaseSession() as db:
+        episodes = (
+            db.query(UserDownloadEpisode)
+            .filter(UserDownloadEpisode.user_id == user_id)
+            .order_by(desc(UserDownloadEpisode.created_at))
+            .limit(5)
+            .all()
+        )
+        episodes = [
+            {
+                "id": episode.episode_id,
+                "anime_id": episode.episode.anime_id,
+                "title": episode.episode.anime.title,
+                "episode_number": episode.episode.ep_number,
+                "poster": episode.episode.anime.poster,
+                "job_id": episode.episode.job_id,
+                "size": episode.episode.size,
+                "status": episode.episode.status,
+                "downloaded_at": episode.created_at,
+            }
+            for episode in episodes
+        ]
+        casted_episodes = cast_episode_download_list(episodes, len(episodes))
+
+        return status.HTTP_200_OK, casted_episodes
 
 
 async def get_downloaded_animes_controller(user_id: str) -> tuple[int, dict]:
@@ -535,7 +567,7 @@ async def get_download_episode_controller(episode_id: int) -> tuple[int, dict]:
         return status.HTTP_200_OK, casted_data
 
 
-async def download_anime_controller(
+async def download_anime_episode_controller(
     anime_id: str,
     episode_number: int,
     force_download: bool,
@@ -582,7 +614,7 @@ async def download_anime_controller(
             )
 
         result = celery_app.send_task(
-            "tasks.download_anime",
+            "tasks.download_anime_episode",
             args=[anime_id, episode_number, user_id, request_id],
         )
 
@@ -663,7 +695,7 @@ async def delete_download_episode_controller(
         return status.HTTP_200_OK, "Episode deleted successfully"
 
 
-async def download_anime_bulk_controller(
+async def download_anime_episode_bulk_controller(
     anime_id: str, episode_numbers: list[int], user_id: str, request_id: str
 ) -> tuple[int, list[dict]]:
     logger.debug(f"Downloading anime with id: {anime_id}")
@@ -671,7 +703,6 @@ async def download_anime_bulk_controller(
     failed_enqueued = []
     with DatabaseSession() as db:
         for ep_number in episode_numbers:
-            print(ep_number, anime_id)
             try:
                 episode = (
                     db.query(Episode)
@@ -711,7 +742,7 @@ async def download_anime_bulk_controller(
                 db.add(episode)
 
                 result = celery_app.send_task(
-                    "tasks.download_anime",
+                    "tasks.download_anime_episode",
                     args=[anime_id, episode.ep_number, user_id, request_id],
                 )
                 logger.debug(f"Enqueued download with job id: {result.id}")

@@ -1,11 +1,18 @@
 from starlette import status
 from loguru import logger
 
-from databases.postgres import DatabaseSession, Avatar, User
+from databases.postgres import (
+    DatabaseSession,
+    Avatar,
+    User,
+    UserDownloadEpisode,
+    UserSaveAnime,
+    Anime,
+)
 from utils.exceptions import ConflictException, NotFoundException
 from packages.auth import get_hash, verify_password
 from .schemas import UserInfo
-from .utils import cast_avatars, cast_user, cast_users
+from .utils import cast_avatars, cast_statistics, cast_user, cast_users
 
 
 async def get_users_controller(user_id: str):
@@ -124,3 +131,35 @@ async def update_user_controller(
         db.flush()
 
         return status.HTTP_200_OK, "User updated successfully"
+
+
+async def get_user_statistics_controller(user_id: str):
+    logger.debug("Getting user statistics")
+    with DatabaseSession() as db:
+        saved_animes = (
+            db.query(UserSaveAnime)
+            .filter(UserSaveAnime.user_id == user_id)
+            .count()
+        )
+        downloaded_episodes = (
+            db.query(UserDownloadEpisode)
+            .filter(UserDownloadEpisode.user_id == user_id)
+            .count()
+        )
+        in_emission_animes = (
+            db.query(UserSaveAnime)
+            .join(UserSaveAnime.anime)
+            .filter(UserSaveAnime.user_id == user_id)
+            .filter(Anime.is_finished.is_(False))
+            .count()
+        )
+
+        statistics = {
+            "saved_animes": saved_animes,
+            "downloaded_episodes": downloaded_episodes,
+            "in_emission_animes": in_emission_animes,
+        }
+
+        casted_statistics = cast_statistics(statistics)
+
+        return status.HTTP_200_OK, casted_statistics

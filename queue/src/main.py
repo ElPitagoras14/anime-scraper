@@ -165,12 +165,12 @@ def update_episode_status(
 
 
 @celery_app.task(
-    name="tasks.download_anime",
+    name="tasks.download_anime_episode",
     bind=True,
     max_retries=MAX_DOWNLOAD_RETRIES,
     default_retry_delay=RETRY_DOWNLOAD_INTERVAL,
 )
-def download_anime(
+def download_anime_episode(
     self,
     anime_id: str,
     episode_number: int,

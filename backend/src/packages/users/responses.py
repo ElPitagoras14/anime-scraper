@@ -47,3 +47,19 @@ class AvatarList(BaseModel):
 
 class AvatarListOut(BaseModel):
     payload: AvatarList | None
+
+
+class Statistics(BaseModel):
+    saved_animes: int
+    downloaded_episodes: int
+    in_emission_animes: int
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+
+
+class StatisticsOut(BaseModel):
+    payload: Statistics | None
