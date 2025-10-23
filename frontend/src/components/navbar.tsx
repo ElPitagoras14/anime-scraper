@@ -111,7 +111,6 @@ export default function Navbar() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => router.push("/settings")}
-                disabled
               >
                 Settings
               </DropdownMenuItem>

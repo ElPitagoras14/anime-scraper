@@ -13,9 +13,11 @@ from utils.responses import (
 )
 from packages.auth import auth_scheme
 from .service import (
+    delete_anime_storage_controller,
     delete_download_episode_controller,
     download_anime_episode_bulk_controller,
     download_anime_episode_controller,
+    get_animes_storage_controller,
     get_download_episode_controller,
     get_download_episodes_controller,
     get_downloaded_animes_controller,
@@ -28,6 +30,7 @@ from .service import (
     unsave_anime_controller,
 )
 from .responses import (
+    AnimeDownloadInfoListOut,
     AnimeOut,
     DownloadTaskListOut,
     DownloadTaskOut,
@@ -317,7 +320,13 @@ async def get_download_episodes(
         raise
 
 
-@animes_router.get("/download/last")
+@animes_router.get(
+    "/download/last",
+    responses={
+        200: {"model": EpisodeDownloadListOut},
+        500: {"model": InternalServerErrorResponse},
+    },
+)
 async def get_last_downloaded_episodes(
     request: Request,
     response: Response,
@@ -349,7 +358,13 @@ async def get_last_downloaded_episodes(
         raise
 
 
-@animes_router.get("/download/anime")
+@animes_router.get(
+    "/download/anime",
+    responses={
+        200: {"model": AnimeDownloadInfoListOut},
+        500: {"model": InternalServerErrorResponse},
+    },
+)
 async def get_downloaded_animes(
     request: Request,
     response: Response,
@@ -424,7 +439,7 @@ async def get_download_episode(
 
         response_data = FileResponse(
             data["path"],
-            media_type="application/octet-stream",
+            media_type="video/mp4",
             headers={
                 "Content-Disposition": "attachment; "
                 + f"filename={data['filename']}"
@@ -578,6 +593,83 @@ async def download_anime_episode_bulk(
         return response_data
     except Exception as e:
         logger.error(f"Error downloading anime {anime_id}: {e}")
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
+            )
+        raise
+
+
+@animes_router.get(
+    "/storage",
+    responses={
+        200: {"model": AnimeDownloadInfoListOut},
+        500: {"model": InternalServerErrorResponse},
+    },
+)
+async def get_animes_storage(
+    request: Request,
+    response: Response,
+    limit: int = 10,
+    page: int = 1,
+    current_user: dict = Depends(auth_scheme),
+):
+    request.state.func = "get_animes_storage"
+    try:
+        logger.info("Getting animes storage")
+        status, data = await get_animes_storage_controller(limit, page)
+
+        response.status_code = status
+
+        response_data = APIResponse(
+            success=True,
+            message="Animes storage retrieved",
+            func="get_animes_storage",
+            payload=data,
+        )
+
+        return response_data
+    except Exception as e:
+        logger.error(f"Error getting animes storage: {e}")
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
+            )
+        raise
+
+
+@animes_router.delete(
+    "/storage/{anime_id}",
+    responses={
+        200: {"model": SuccessResponse},
+        409: {"model": ConflictResponse},
+        500: {"model": InternalServerErrorResponse},
+    },
+)
+async def delete_anime_storage(
+    anime_id: str,
+    request: Request,
+    response: Response,
+    current_user: dict = Depends(auth_scheme),
+):
+    request.state.func = "delete_anime_storage"
+    try:
+        logger.info(f"Deleting anime with id: {anime_id}")
+        status, _ = await delete_anime_storage_controller(
+            anime_id, current_user["id"], request.state.request_id
+        )
+
+        response.status_code = status
+
+        response_data = APIResponse(
+            success=True,
+            message="Anime storage deleted successfully",
+            func="delete_anime_storage",
+        )
+
+        return response_data
+    except Exception as e:
+        logger.error(f"Error deleting anime storage: {e}")
         if not isinstance(e, (NotFoundException, ConflictException)):
             raise InternalServerErrorException(
                 "Internal server error", request_id=request.state.request_id

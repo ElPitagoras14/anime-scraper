@@ -1,12 +1,15 @@
 import time
 from psycopg2 import OperationalError
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
 from loguru import logger
 
 from .config import postgres_settings
 
 POSTGRES_URL = postgres_settings.POSTGRES_URL
+
+if POSTGRES_URL.startswith("postgresql"):
+    POSTGRES_URL = POSTGRES_URL.replace("postgresql", "postgresql+asyncpg")
 
 host = POSTGRES_URL.split("@")[1].split(":")[0]
 port = POSTGRES_URL.split(":")[2].split("/")[0]
@@ -18,18 +21,14 @@ DELAY = 5
 
 for _ in range(RETRIES):
     try:
-        engine = create_engine(
+        engine = create_async_engine(
             POSTGRES_URL,
             pool_size=10,
             max_overflow=5,
             pool_timeout=30,
             pool_recycle=1800,
+            echo=False,
         )
-        with engine.connect() as connection:
-            logger.info(
-                f"Connected to the database {database} on "
-                + f"{host}:{port} as {user}"
-            )
         break
     except OperationalError:
         logger.error(
@@ -45,22 +44,29 @@ else:
     exit(1)
 
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+AsyncSessionLocal = sessionmaker(
+    bind=engine,
+    expire_on_commit=False,
+    autoflush=False,
+    autocommit=False,
+    class_=AsyncSession,
+)
 
 
-class DatabaseSession:
+class AsyncDatabaseSession:
     def __init__(self):
-        self.db = None
+        self.db: AsyncSession | None = None
 
-    def __enter__(self) -> Session:
-        self.db = SessionLocal()
+    async def __aenter__(self) -> AsyncSession:
+        self.db = AsyncSessionLocal()
         return self.db
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
             if exc_type is None:
-                self.db.commit()
+                await self.db.commit()
             else:
-                self.db.rollback()
+                await self.db.rollback()
+                logger.error(f"DB rollback due to: {exc_val}")
         finally:
-            self.db.close()
+            await self.db.close()
