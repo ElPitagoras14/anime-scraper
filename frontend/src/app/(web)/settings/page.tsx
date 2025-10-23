@@ -1,15 +1,15 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Dashboard from "./components/dashboard";
 import Users from "./components/users/users";
 import Storage from "./components/storage/storage";
+import Season from "./components/season/season";
 
 export default function Configuration() {
   return (
     <div className="flex flex-col gap-y-10">
-      <Tabs defaultValue="dashboard">
+      <Tabs defaultValue="season">
         <TabsList className="w-full py-5 mb-4">
-          <TabsTrigger className="w-full text-base py-4" value="dashboard">
-            Dashboard
+          <TabsTrigger className="w-full text-base py-4" value="season">
+            Season Relation
           </TabsTrigger>
           <TabsTrigger className="w-full text-base py-4" value="storage">
             Storage
@@ -18,8 +18,8 @@ export default function Configuration() {
             Users
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="dashboard">
-          <Dashboard />
+        <TabsContent value="season">
+          <Season />
         </TabsContent>
         <TabsContent value="storage">
           <Storage />

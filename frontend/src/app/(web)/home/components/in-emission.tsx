@@ -43,11 +43,13 @@ export default function InEmission() {
   if (isLoading) {
     return (
       <Card className="col-span-4">
-        <CardHeader>
-          <CardTitle>Today&apos;s Emitted</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-50 w-40" />
+        <CardContent className="flex flex-col gap-y-4">
+          <span className="text-sm font-semibold">Today&apos;s Emitted</span>
+          <div className="flex flex-row gap-x-4">
+            <Skeleton className="h-50 w-40" />
+            <Skeleton className="h-50 w-40" />
+            <Skeleton className="h-50 w-40" />
+          </div>
         </CardContent>
       </Card>
     );
@@ -60,7 +62,10 @@ export default function InEmission() {
         <div className="flex flex-row">
           {todaysAnimes.map((anime: InEmissionAnime) => {
             return (
-              <div className="flex flex-col justify-start items-center gap-y-2" key={anime.id}>
+              <div
+                className="flex flex-col justify-start items-center gap-y-2"
+                key={anime.id}
+              >
                 <Link href={`/anime/${anime.id}`}>
                   <Image
                     src={anime.poster}

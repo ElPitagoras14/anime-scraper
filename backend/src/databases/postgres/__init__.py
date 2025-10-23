@@ -1,4 +1,4 @@
-from .client import DatabaseSession
+from .client import AsyncDatabaseSession
 from .models import (
     User,
     Anime,

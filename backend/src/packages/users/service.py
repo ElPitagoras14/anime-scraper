@@ -1,8 +1,10 @@
+from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 from starlette import status
 from loguru import logger
 
 from databases.postgres import (
-    DatabaseSession,
+    AsyncDatabaseSession,
     Avatar,
     User,
     UserDownloadEpisode,
@@ -17,8 +19,12 @@ from .utils import cast_avatars, cast_statistics, cast_user, cast_users
 
 async def get_users_controller(user_id: str):
     logger.debug("Getting users")
-    with DatabaseSession() as db:
-        users = db.query(User).all()
+    async with AsyncDatabaseSession() as db:
+        stmt = select(User).options(
+            selectinload(User.avatar), selectinload(User.role)
+        )
+        result = await db.execute(stmt)
+        users = result.scalars().all()
 
         specific_user = None
         other_users = []
@@ -52,11 +58,19 @@ async def get_users_controller(user_id: str):
 
 async def get_me_controller(user_id: str, request_id: str):
     logger.debug("Getting me")
-    with DatabaseSession() as db:
-        user = db.query(User).where(User.id == user_id).first()
+    async with AsyncDatabaseSession() as db:
+        stmt = (
+            select(User)
+            .where(User.id == user_id)
+            .options(selectinload(User.role))
+        )
+        result = await db.execute(stmt)
+        user = result.scalar()
         if not user:
             raise NotFoundException("User not found", request_id=request_id)
-        avatar = db.query(Avatar).where(Avatar.id == user.avatar_id).first()
+        stmt = select(Avatar).where(Avatar.id == user.avatar_id)
+        result = await db.execute(stmt)
+        avatar = result.scalar()
         if not avatar:
             raise NotFoundException("Avatar not found", request_id=request_id)
 
@@ -77,8 +91,9 @@ async def get_me_controller(user_id: str, request_id: str):
 
 async def check_username_controller(username: str):
     logger.debug(f"Checking username {username}")
-    with DatabaseSession() as db:
-        user = db.query(User).where(User.username == username).first()
+    async with AsyncDatabaseSession() as db:
+        stmt = select(User).where(User.username == username)
+        user = await db.scalar(stmt)
         if user:
             return status.HTTP_200_OK, False
         return status.HTTP_200_OK, True
@@ -86,8 +101,10 @@ async def check_username_controller(username: str):
 
 async def get_avatars_controller():
     logger.debug("Getting avatars")
-    with DatabaseSession() as db:
-        avatars = db.query(Avatar).all()
+    async with AsyncDatabaseSession() as db:
+        stmt = select(Avatar)
+        result = await db.execute(stmt)
+        avatars = result.scalars().all()
 
         avatars = [
             {
@@ -107,8 +124,10 @@ async def update_user_controller(
     user_info: UserInfo, user_id: str, request_id: str
 ):
     logger.debug(f"Updating user with id: {user_id}")
-    with DatabaseSession() as db:
-        user = db.query(User).where(User.id == user_id).first()
+    async with AsyncDatabaseSession() as db:
+        stmt = select(User).where(User.id == user_id)
+        result = await db.execute(stmt)
+        user = result.scalar()
         if not user:
             raise NotFoundException("User not found", request_id=request_id)
 
@@ -128,31 +147,39 @@ async def update_user_controller(
             user.avatar_id = user_info.avatar_id
 
         db.add(user)
-        db.flush()
-
         return status.HTTP_200_OK, "User updated successfully"
 
 
 async def get_user_statistics_controller(user_id: str):
     logger.debug("Getting user statistics")
-    with DatabaseSession() as db:
-        saved_animes = (
-            db.query(UserSaveAnime)
-            .filter(UserSaveAnime.user_id == user_id)
-            .count()
+    async with AsyncDatabaseSession() as db:
+        stmt = (
+            select(func.count())
+            .select_from(UserSaveAnime)
+            .where(UserSaveAnime.user_id == user_id)
         )
-        downloaded_episodes = (
-            db.query(UserDownloadEpisode)
-            .filter(UserDownloadEpisode.user_id == user_id)
-            .count()
+        result_count = await db.execute(stmt)
+        saved_animes = result_count.scalar_one()
+
+        stmt = (
+            select(func.count())
+            .select_from(UserDownloadEpisode)
+            .where(UserDownloadEpisode.user_id == user_id)
         )
-        in_emission_animes = (
-            db.query(UserSaveAnime)
+        result_count = await db.execute(stmt)
+        downloaded_episodes = result_count.scalar_one()
+
+        stmt = (
+            select(func.count())
+            .select_from(UserSaveAnime)
             .join(UserSaveAnime.anime)
-            .filter(UserSaveAnime.user_id == user_id)
-            .filter(Anime.is_finished.is_(False))
-            .count()
+            .where(
+                UserSaveAnime.user_id == user_id,
+                Anime.is_finished.is_(False),
+            )
         )
+        result_count = await db.execute(stmt)
+        in_emission_animes = result_count.scalar_one()
 
         statistics = {
             "saved_animes": saved_animes,

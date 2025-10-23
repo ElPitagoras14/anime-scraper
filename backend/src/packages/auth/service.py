@@ -1,7 +1,9 @@
 from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from starlette import status
 
-from databases.postgres import DatabaseSession, User
+from databases.postgres import AsyncDatabaseSession, User
 from utils.exceptions import NotFoundException, ConflictException
 from .utils import (
     get_hash,
@@ -14,10 +16,15 @@ from .utils import (
 )
 
 
-def login_controller(username: str, password: str, request_id: str):
+async def login_controller(username: str, password: str, request_id: str):
     logger.debug(f"User {username} is trying to log in")
-    with DatabaseSession() as db:
-        user = db.query(User).filter(User.username == username).first()
+    async with AsyncDatabaseSession() as db:
+        stmt = (
+            select(User)
+            .where(User.username == username)
+            .options(selectinload(User.role), selectinload(User.avatar))
+        )
+        user = await db.scalar(stmt)
         if not user:
             logger.debug(f"User {username} not found")
             raise NotFoundException("User not found", request_id=request_id)
@@ -54,10 +61,11 @@ def login_controller(username: str, password: str, request_id: str):
         return status.HTTP_200_OK, casted_tokens
 
 
-def register_controller(username: str, password: str, request_id: str):
+async def register_controller(username: str, password: str, request_id: str):
     logger.debug(f"User {username} is trying to register")
-    with DatabaseSession() as db:
-        user = db.query(User).filter(User.username == username).first()
+    async with AsyncDatabaseSession() as db:
+        stmt = select(User).where(User.username == username)
+        user = await db.scalar(stmt)
         if user:
             logger.debug(f"User {username} already exists")
             raise ConflictException(

@@ -1,6 +1,8 @@
 from .responses import (
     AnimeDownloadInfo,
     AnimeDownloadInfoList,
+    AnimeStorageInfo,
+    AnimeStorageInfoList,
     DownloadTaskList,
     DownloadTaskStatus,
     EpisodeDownload,
@@ -158,5 +160,23 @@ def cast_downloaded_anime_list(
 ) -> AnimeDownloadInfoList:
     return AnimeDownloadInfoList(
         items=[cast_anime_download_info(anime) for anime in animes],
+        total=total,
+    )
+
+
+def cast_anime_storage(anime: dict) -> AnimeStorageInfo:
+    return AnimeStorageInfo(
+        id=anime["id"],
+        title=anime["title"],
+        size=anime["size"],
+    )
+
+
+def cast_animes_storage_list(
+    animes: list[dict],
+    total: int,
+) -> AnimeStorageInfoList:
+    return AnimeStorageInfoList(
+        items=[cast_anime_storage(anime) for anime in animes],
         total=total,
     )

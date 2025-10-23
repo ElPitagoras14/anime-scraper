@@ -1,8 +1,10 @@
 from fastapi import Request, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
-from databases.postgres import DatabaseSession, User
+from databases.postgres import AsyncDatabaseSession, User
 from .config import auth_settings
 
 SECRET_KEY = auth_settings.SECRET_KEY
@@ -14,7 +16,7 @@ class JWTBearer(HTTPBearer):
         super().__init__(auto_error=auto_error)
 
     async def __call__(self, request: Request) -> User:
-        with DatabaseSession() as db:
+        async with AsyncDatabaseSession() as db:
             credentials: HTTPAuthorizationCredentials = await super().__call__(
                 request
             )
@@ -32,7 +34,14 @@ class JWTBearer(HTTPBearer):
                             detail="Invalid token",
                         )
 
-                    user = db.query(User).filter(User.id == user_id).first()
+                    stmt = (
+                        select(User)
+                        .where(User.id == user_id)
+                        .options(
+                            selectinload(User.role), selectinload(User.avatar)
+                        )
+                    )
+                    user = await db.scalar(stmt)
                     if not user:
                         raise HTTPException(
                             status_code=status.HTTP_401_UNAUTHORIZED,

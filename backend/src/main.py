@@ -1,10 +1,11 @@
+from sqlalchemy import select
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from contextlib import asynccontextmanager
 
-from databases.postgres import DatabaseSession, User
+from databases.postgres import AsyncDatabaseSession, User
 from packages.auth import get_hash
 from utils.exception_handlers import (
     custom_http_exception_handler,
@@ -28,8 +29,9 @@ configure_logs()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    with DatabaseSession() as db:
-        root_user = db.query(User).filter(User.role_id == 1).first()
+    async with AsyncDatabaseSession() as db:
+        stmt = select(User).where(User.role_id == 1)
+        root_user = await db.scalar(stmt)
         if not root_user:
             logger.info("Admin user not found, creating...")
             hashed_password = get_hash(ADMIN_PASS)
@@ -40,10 +42,11 @@ async def lifespan(app: FastAPI):
                 is_active=True,
             )
             db.add(root_user)
-            db.commit()
-            db.refresh(root_user)
+            await db.commit()
+            await db.refresh(root_user)
             logger.success(f"Admin user '{ADMIN_USER}' created successfully")
-        guest_user = db.query(User).filter(User.role_id == 3).first()
+        smtm = select(User).where(User.role_id == 3)
+        guest_user = await db.scalar(smtm)
         if not guest_user:
             logger.info("Guest user not found, creating...")
             hashed_password = get_hash("guest123")
@@ -54,8 +57,8 @@ async def lifespan(app: FastAPI):
                 is_active=True,
             )
             db.add(guest_user)
-            db.commit()
-            db.refresh(guest_user)
+            await db.commit()
+            await db.refresh(guest_user)
             logger.success("Guest user 'guest' created successfully")
 
     logger.info("Application starting up...")

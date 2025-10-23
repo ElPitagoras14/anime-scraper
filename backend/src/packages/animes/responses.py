@@ -166,3 +166,18 @@ class DownloadTaskList(BaseModel):
 
 class DownloadTaskListOut(SuccessResponse):
     payload: DownloadTaskList | None
+
+
+class AnimeStorageInfo(BaseModel):
+    id: str
+    title: str
+    size: int
+
+
+class AnimeStorageInfoList(BaseModel):
+    items: list[AnimeStorageInfo]
+    total: int
+
+
+class AnimeStorageInfoListOut(SuccessResponse):
+    payload: AnimeStorageInfoList | None

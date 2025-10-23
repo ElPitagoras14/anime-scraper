@@ -2,9 +2,10 @@
 
 import { formatDateTime } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
-import { CircleCheckIcon, CircleXIcon } from "lucide-react";
-import Image from "next/image";
-import DeleteModal from "./delete-modal";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import RoleCell from "./role-cell";
+import ActiveCell from "./active-cell";
+import ActionCell from "./action-celll";
 
 export type User = {
   id: string;
@@ -27,11 +28,12 @@ export const userColumns: ColumnDef<User>[] = [
       },
     }) => (
       <div className="flex justify-center">
-        <div className="relative w-20 h-20 rounded-full bg-muted/20">
-          {avatarUrl && (
-            <Image src={avatarUrl} alt={avatarLabel!} fill className="p-3" />
-          )}
-        </div>
+        <Avatar className="w-28 h-28 p-5">
+          <AvatarImage src={avatarUrl || ""} alt={avatarLabel || ""} />
+          <AvatarFallback className="text-xl font-semibold">
+            {avatarLabel?.toUpperCase() || "N/A"}
+          </AvatarFallback>
+        </Avatar>
       </div>
     ),
   },
@@ -42,7 +44,7 @@ export const userColumns: ColumnDef<User>[] = [
       row: {
         original: { username },
       },
-    }) => <div className="text-center">{username}</div>,
+    }) => <div className="text-center text-base font-semibold">{username}</div>,
   },
   {
     accessorKey: "role",
@@ -51,7 +53,7 @@ export const userColumns: ColumnDef<User>[] = [
       row: {
         original: { role },
       },
-    }) => <div className="text-center">{role}</div>,
+    }) => <RoleCell role={role} />,
   },
   {
     accessorKey: "isActive",
@@ -60,15 +62,7 @@ export const userColumns: ColumnDef<User>[] = [
       row: {
         original: { isActive },
       },
-    }) => (
-      <div className="flex justify-center items-center">
-        {isActive ? (
-          <CircleCheckIcon className="text-green-500 dark:text-green-400" />
-        ) : (
-          <CircleXIcon className="text-red-500 dark:text-red-400" />
-        )}
-      </div>
-    ),
+    }) => <ActiveCell isActive={isActive} />,
   },
   {
     accessorKey: "createdAt",
@@ -95,10 +89,6 @@ export const userColumns: ColumnDef<User>[] = [
       row: {
         original: { id, username },
       },
-    }) => (
-      <div className="flex justify-center">
-        <DeleteModal userId={id} username={username} />
-      </div>
-    ),
+    }) => <ActionCell userId={id} username={username} />,
   },
 ];

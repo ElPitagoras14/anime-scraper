@@ -10,9 +10,9 @@ from celery.signals import worker_ready
 from celery.exceptions import MaxRetriesExceededError
 from loguru import logger
 from ani_scrapy.sync_api import JKAnimeScraper, SyncBrowser
+from sqlalchemy import select
 
-from database.client import DatabaseSession
-from database.models import Episode
+from database import DatabaseSession, Episode
 from config import general_settings
 
 if sys.platform == "win32":
@@ -144,14 +144,10 @@ def update_episode_status(
     anime_id: str, episode_number: int, status: str, job_id: str = None
 ):
     with DatabaseSession() as db:
-        episode = (
-            db.query(Episode)
-            .filter(
-                Episode.anime_id == anime_id,
-                Episode.ep_number == episode_number,
-            )
-            .first()
+        stmt = select(Episode).filter_by(
+            anime_id=anime_id, ep_number=episode_number
         )
+        episode = db.execute(stmt).scalar_one_or_none()
         if not episode:
             logger.error(f"Episode {anime_id} - {episode_number} not found")
             return

@@ -32,7 +32,7 @@ async def login(login_info: LoginInfo, request: Request, response: Response):
     request.state.func = "login"
     try:
         logger.info(f"Logging in {login_info.username}")
-        status, data = login_controller(
+        status, data = await login_controller(
             login_info.username, login_info.password, request.state.request_id
         )
 
@@ -71,7 +71,7 @@ async def register(
     request.state.func = "register"
     try:
         logger.info(f"Registering {register_info.username}")
-        status, data = register_controller(
+        status, data = await register_controller(
             register_info.username,
             register_info.password,
             request.state.request_id,
