@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import apiClient from "@/lib/api-client";
 import { useQuery } from "@tanstack/react-query";
@@ -34,7 +34,7 @@ export default function Statistics() {
     return (
       <Card>
         <CardContent className="flex flex-col gap-y-4">
-        <span className="text-sm font-semibold">Statistics</span>
+          <span className="text-sm font-semibold">Statistics</span>
           <Skeleton className="h-10 w-40" />
           <Skeleton className="h-10 w-40" />
           <Skeleton className="h-10 w-40" />

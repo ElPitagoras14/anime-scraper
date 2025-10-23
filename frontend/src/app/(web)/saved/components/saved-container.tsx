@@ -84,7 +84,7 @@ export default function SavedContainer({ items }: SavedContainerProps) {
         )}
       </div>
       <div className="flex flex-row flex-wrap gap-x-9 gap-y-4">
-        {sortedItems.map((item: AnimeInfo, idx) => (
+        {sortedItems.map((item: AnimeInfo) => (
           <AnimeCard key={item.id} animeInfo={item} />
         ))}
       </div>

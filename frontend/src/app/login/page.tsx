@@ -12,7 +12,6 @@ import { SiGithub, SiBuymeacoffee } from "@icons-pack/react-simple-icons";
 import CustomField from "@/components/form-fields/custom-field";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { Icons } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {

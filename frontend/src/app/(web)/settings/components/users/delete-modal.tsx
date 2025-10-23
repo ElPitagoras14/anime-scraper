@@ -13,7 +13,7 @@ interface DeleteModalProps {
   username: string;
 }
 
-export default function DeleteModal({ userId, username }: DeleteModalProps) {
+export default function DeleteModal({ username }: DeleteModalProps) {
   return (
     <Dialog>
       <DialogTrigger>

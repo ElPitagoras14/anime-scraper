@@ -13,7 +13,6 @@ import apiClient from "@/lib/api-client";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
-import { Icons } from "./ui/icons";
 import { Spinner } from "./ui/spinner";
 
 export interface AnimeInfo {

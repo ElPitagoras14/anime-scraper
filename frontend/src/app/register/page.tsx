@@ -10,7 +10,6 @@ import { FormField } from "@/lib/interfaces";
 import { Form } from "@/components/ui/form";
 import { SiGithub, SiBuymeacoffee } from "@icons-pack/react-simple-icons";
 import CustomField from "@/components/form-fields/custom-field";
-import { Icons } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";

@@ -14,7 +14,7 @@ const getUsers = async () => {
 };
 
 export default function Users() {
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["users"],
     queryFn: () => getUsers(),
     refetchOnWindowFocus: false,

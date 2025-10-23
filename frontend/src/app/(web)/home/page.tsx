@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import LastDownload from "./components/last-download";
 import { auth } from "@/auth";
 import Statistics from "./components/statistics";
