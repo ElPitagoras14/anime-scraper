@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import apiClient from "@/lib/api-client";
+import { Spinner } from "@/components/ui/spinner";
 
 const fields: FormField[] = [
   {
@@ -143,7 +144,7 @@ export default function Login() {
             <Button type="button" className="cursor-pointer" onClick={onSubmit}>
               Register{" "}
               {mutation.isPending && (
-                <Icons.spinner className="animate-spin size-5" />
+                <Spinner className="size-5" />
               )}
             </Button>
             <div className="flex justify-center gap-4">

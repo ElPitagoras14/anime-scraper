@@ -1,4 +1,4 @@
-from .responses import Avatar, AvatarList, User, UserList
+from .responses import Avatar, AvatarList, User, UserList, Statistics
 
 
 def cast_user(user: dict) -> User:
@@ -33,4 +33,12 @@ def cast_avatars(avatars: list[dict], total: int) -> AvatarList:
     return AvatarList(
         items=[cast_avatar(avatar) for avatar in avatars],
         total=total,
+    )
+
+
+def cast_statistics(statistics: dict) -> Statistics:
+    return Statistics(
+        saved_animes=statistics["saved_animes"],
+        downloaded_episodes=statistics["downloaded_episodes"],
+        in_emission_animes=statistics["in_emission_animes"],
     )

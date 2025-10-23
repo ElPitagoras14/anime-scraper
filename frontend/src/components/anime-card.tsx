@@ -14,6 +14,7 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
 import { Icons } from "./ui/icons";
+import { Spinner } from "./ui/spinner";
 
 export interface AnimeInfo {
   id: string;
@@ -126,7 +127,7 @@ export default function AnimeCard({ animeInfo }: AnimeCardProps) {
                 handleSave();
               }}
             >
-              <Icons.spinner className="h-6 w-6 animate-spin" />
+              <Spinner className="size-6"/>
             </div>
           </div>
         ) : (

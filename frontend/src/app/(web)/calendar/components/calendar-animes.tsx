@@ -29,7 +29,7 @@ export default function CalendarAnimes({ animes }: CalendarAnimesProps) {
                 </div>
               </Link>
             </TooltipTrigger>
-            <TooltipContent className="bg-background">
+            <TooltipContent className="p-0 m-0 border">
               <div className="flex flex-row gap-x-2">
                 <Image
                   src={poster}

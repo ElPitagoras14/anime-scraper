@@ -12,6 +12,7 @@ from .service import (
     check_username_controller,
     get_avatars_controller,
     get_me_controller,
+    get_user_statistics_controller,
     get_users_controller,
     update_user_controller,
 )
@@ -161,6 +162,36 @@ async def get_avatars(
         return response_data
     except Exception as e:
         logger.error(f"Error getting avatars: {e}")
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
+            )
+        raise
+
+
+@users_router.get("/statistics")
+async def get_user_statistics(
+    request: Request,
+    response: Response,
+    current_user: dict = Depends(auth_scheme),
+):
+    request.state.func = "get_users_statistics"
+    try:
+        logger.info("Getting users statistics")
+        status, data = await get_user_statistics_controller(current_user["id"])
+
+        response.status_code = status
+
+        response_data = APIResponse(
+            success=True,
+            message="User statistics retrieved",
+            func="get_users_statistics",
+            payload=data,
+        )
+
+        return response_data
+    except Exception as e:
+        logger.error(f"Error getting user statistics: {e}")
         if not isinstance(e, (NotFoundException, ConflictException)):
             raise InternalServerErrorException(
                 "Internal server error", request_id=request.state.request_id

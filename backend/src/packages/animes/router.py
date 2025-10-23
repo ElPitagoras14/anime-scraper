@@ -14,12 +14,13 @@ from utils.responses import (
 from packages.auth import auth_scheme
 from .service import (
     delete_download_episode_controller,
-    download_anime_bulk_controller,
-    download_anime_controller,
+    download_anime_episode_bulk_controller,
+    download_anime_episode_controller,
     get_download_episode_controller,
+    get_download_episodes_controller,
     get_downloaded_animes_controller,
-    get_downloads_controller,
     get_in_emission_animes_controller,
+    get_last_downloaded_episodes_controller,
     get_saved_animes_controller,
     save_anime_controller,
     search_anime_controller,
@@ -282,7 +283,7 @@ async def get_in_emission_animes(
         500: {"model": InternalServerErrorResponse},
     },
 )
-async def get_downloads(
+async def get_download_episodes(
     request: Request,
     response: Response,
     anime_id: str | None = None,
@@ -290,10 +291,10 @@ async def get_downloads(
     page: int = 1,
     current_user: dict = Depends(auth_scheme),
 ):
-    request.state.func = "get_downloads"
+    request.state.func = "get_download_episodes"
     try:
         logger.info("Getting downloads")
-        status, data = await get_downloads_controller(
+        status, data = await get_download_episodes_controller(
             current_user["id"], anime_id, limit, page
         )
 
@@ -302,13 +303,45 @@ async def get_downloads(
         response_data = APIResponse(
             success=True,
             message="Downloads retrieved",
-            func="get_downloads",
+            func="get_download_episodes",
             payload=data,
         )
 
         return response_data
     except Exception as e:
         logger.error(f"Error getting downloads: {e}")
+        if not isinstance(e, (NotFoundException, ConflictException)):
+            raise InternalServerErrorException(
+                "Internal server error", request_id=request.state.request_id
+            )
+        raise
+
+
+@animes_router.get("/download/last")
+async def get_last_downloaded_episodes(
+    request: Request,
+    response: Response,
+    current_user: dict = Depends(auth_scheme),
+):
+    request.state.func = "get_last_downloaded_episodes"
+    try:
+        logger.info("Getting last downloaded episodes")
+        status, data = await get_last_downloaded_episodes_controller(
+            current_user["id"]
+        )
+
+        response.status_code = status
+
+        response_data = APIResponse(
+            success=True,
+            message="Last downloaded episodes retrieved",
+            func="get_last_downloaded_episodes",
+            payload=data,
+        )
+
+        return response_data
+    except Exception as e:
+        logger.error(f"Error getting last downloaded episodes: {e}")
         if not isinstance(e, (NotFoundException, ConflictException)):
             raise InternalServerErrorException(
                 "Internal server error", request_id=request.state.request_id
@@ -419,7 +452,7 @@ async def get_download_episode(
         500: {"model": InternalServerErrorResponse},
     },
 )
-async def download_anime(
+async def download_anime_episode(
     anime_id: str,
     episode_number: int,
     request: Request,
@@ -427,12 +460,12 @@ async def download_anime(
     force_download: bool = False,
     current_user: dict = Depends(auth_scheme),
 ):
-    request.state.func = "download_anime"
+    request.state.func = "download_anime_episode"
 
     try:
         logger.info(f"Downloading anime with id: {anime_id}")
 
-        status, data = await download_anime_controller(
+        status, data = await download_anime_episode_controller(
             anime_id,
             episode_number,
             force_download,
@@ -445,7 +478,7 @@ async def download_anime(
         response_data = APIResponse(
             success=True,
             message="Anime downloaded successfully",
-            func="download_anime",
+            func="download_anime_episode",
             payload=data,
         )
 
@@ -514,19 +547,19 @@ async def delete_download_episode(
         500: {"model": InternalServerErrorResponse},
     },
 )
-async def download_anime_bulk(
+async def download_anime_episode_bulk(
     anime_id: str,
     request: Request,
     response: Response,
     episodes: list[int],
     current_user: dict = Depends(auth_scheme),
 ):
-    request.state.func = "download_anime"
+    request.state.func = "download_anime_episode_bulk"
 
     try:
         logger.info(f"Downloading anime with id: {anime_id}")
 
-        status, data = await download_anime_bulk_controller(
+        status, data = await download_anime_episode_bulk_controller(
             anime_id,
             episodes,
             current_user["id"],
@@ -538,7 +571,7 @@ async def download_anime_bulk(
         response_data = APIResponse(
             success=True,
             message="Anime downloaded successfully",
-            func="download_anime",
+            func="download_anime_episode_bulk",
             payload=data,
         )
 

@@ -27,6 +27,7 @@ import { useDebounce } from "use-debounce";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 
 const updateUsername = async (username: string) => {
   const options = {
@@ -128,7 +129,7 @@ export default function Profile() {
             {editUsername && (
               <>
                 {isLoading ? (
-                  <Icons.spinner className="animate-spin" />
+                  <Spinner className="size-6" />
                 ) : canUpdate ? (
                   usernameAvailable ? (
                     <Tooltip>
