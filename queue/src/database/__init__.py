@@ -1,2 +1,2 @@
 from .client import DatabaseSession
-from .models import Episode
+from .models import Episode, Anime

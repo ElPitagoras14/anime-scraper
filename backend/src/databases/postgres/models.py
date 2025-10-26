@@ -21,7 +21,7 @@ Base = declarative_base()
 class Franchise(Base):
     __tablename__ = "franchises"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(String(255), primary_key=True)
     name = Column(String(255), nullable=False)
     created_at = Column(TIMESTAMP, default=func.now(), nullable=False)
 
@@ -67,8 +67,8 @@ class Anime(Base):
 
     id = Column(String(255), primary_key=True)
     franchise_id = Column(
-        Integer,
-        ForeignKey("franchises.id", ondelete="CASCADE"),
+        String(255),
+        ForeignKey("franchises.id", ondelete="SET NULL"),
         nullable=True,
     )
     season = Column(Integer, default=1)
@@ -93,7 +93,7 @@ class Anime(Base):
     episodes = relationship(
         "Episode", back_populates="anime", cascade="all, delete"
     )
-    franchise = relationship("Franchise", back_populates="animes")
+    franchise = relationship("Franchise", back_populates="animes", cascade="")
     relations = relationship(
         "AnimeRelation",
         back_populates="anime",

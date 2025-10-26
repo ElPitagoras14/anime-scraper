@@ -19,7 +19,7 @@ Base = declarative_base()
 class Franchise(Base):
     __tablename__ = "franchises"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(String(255), primary_key=True)
     name = Column(String(255), nullable=False)
     created_at = Column(TIMESTAMP, default=func.now(), nullable=False)
 
@@ -65,7 +65,7 @@ class Anime(Base):
 
     id = Column(String(255), primary_key=True)
     franchise_id = Column(
-        Integer,
+        String(255),
         ForeignKey("franchises.id", ondelete="CASCADE"),
         nullable=True,
     )

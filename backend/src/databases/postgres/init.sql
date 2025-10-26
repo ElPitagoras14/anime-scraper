@@ -2,14 +2,14 @@
 -- SCHEMA: Anime Database
 -- ========================================
 CREATE TABLE franchises (
-  id SERIAL PRIMARY KEY,
+  id VARCHAR(255) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE animes (
   id VARCHAR(255) PRIMARY KEY,
-  franchise_id INTEGER REFERENCES franchises(id),
+  franchise_id VARCHAR(255) REFERENCES franchises(id) ON DELETE SET NULL,
   season INTEGER DEFAULT 1,
   title VARCHAR(255),
   description TEXT,

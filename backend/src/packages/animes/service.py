@@ -418,7 +418,7 @@ async def save_anime_controller(
         )
         result = await db.execute(stmt)
         anime_db = result.scalar()
-        if not anime_db:
+        if not anime_db or not anime_db.last_scraped_at:
             await add_new_anime(db, base_url, anime_id)
         new_saved_anime = UserSaveAnime(
             user_id=user_id,
@@ -629,10 +629,15 @@ async def get_download_episode_controller(episode_id: int) -> tuple[int, dict]:
         if not episode:
             return status.HTTP_404_NOT_FOUND, "Episode not found"
 
+        franchise_id = episode.anime.franchise_id
         parsed_season = str(episode.anime.season).zfill(2)
         anime_folder = (
             ANIMES_FOLDER / episode.anime_id / f"Season {parsed_season}"
         )
+        if franchise_id:
+            anime_folder = (
+                ANIMES_FOLDER / franchise_id / f"Season {parsed_season}"
+            )
         if not os.path.exists(anime_folder):
             return status.HTTP_404_NOT_FOUND, "Episode not found"
 
@@ -750,9 +755,14 @@ async def delete_download_episode_controller(
 
         if users_downloads == 0:
             parsed_season = str(episode.anime.season).zfill(2)
+            franchise_id = episode.anime.franchise_id
             anime_folder = (
                 ANIMES_FOLDER / episode.anime_id / f"Season {parsed_season}"
             )
+            if franchise_id:
+                anime_folder = (
+                    ANIMES_FOLDER / franchise_id / f"Season {parsed_season}"
+                )
             if not anime_folder.exists():
                 return status.HTTP_404_NOT_FOUND, "Episode not found"
 
