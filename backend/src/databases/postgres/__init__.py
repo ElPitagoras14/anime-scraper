@@ -1,5 +1,6 @@
 from .client import AsyncDatabaseSession
 from .models import (
+    Franchise,
     User,
     Anime,
     Episode,

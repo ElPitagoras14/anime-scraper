@@ -63,26 +63,24 @@ export default function LastDownload({ role }: LastDownloadProps) {
         <ItemGroup className="grid grid-cols-2 gap-x-4 gap-y-2">
           {lastDownloads?.map((episode: EpisodeDownload) => (
             <Item key={episode.id} variant="outline">
-              <ItemContent>
-                <Tooltip key={episode.id}>
-                  <TooltipTrigger>
-                    <SearchIcon className="size-5" />
-                  </TooltipTrigger>
-                  <TooltipContent className="p-0 m-0 border">
-                    <Image
-                      src={episode.poster}
-                      alt={episode.title}
-                      width={150}
-                      height={200}
-                      className="rounded-md"
-                    />
-                  </TooltipContent>
-                </Tooltip>
-              </ItemContent>
+              <Tooltip key={episode.id}>
+                <TooltipTrigger>
+                  <SearchIcon className="size-5" />
+                </TooltipTrigger>
+                <TooltipContent className="p-0 m-0 border">
+                  <Image
+                    src={episode.poster}
+                    alt={episode.title}
+                    width={150}
+                    height={200}
+                    className="rounded-md"
+                  />
+                </TooltipContent>
+              </Tooltip>
               <ItemContent>
                 <ItemTitle>
                   <Link href={`/anime/${episode.animeId}`}>
-                    {episode.title}
+                    {episode.title.slice(0, 36)}
                   </Link>
                 </ItemTitle>
                 <ItemDescription>

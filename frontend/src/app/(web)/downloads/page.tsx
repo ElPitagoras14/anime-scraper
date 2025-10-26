@@ -187,7 +187,12 @@ export default function Downloads() {
     const items = serverData?.data?.payload?.items;
 
     const jobIds = items
-      .filter((episode: EpisodeDownload) => episode.jobId)
+      .filter(
+        (episode: EpisodeDownload) =>
+          episode.jobId &&
+          episode.status !== "SUCCESS" &&
+          episode.status !== "FAILED"
+      )
       .map((episode: EpisodeDownload) => episode.jobId as string);
 
     setJobIds(jobIds);

@@ -21,9 +21,7 @@ export default function Storage() {
   });
 
   const handleRefetch = async () => {
-    console.log("refetch");
     await refetch();
-    console.log("refetch done");
   };
 
   const animes = data?.data?.payload?.items || [];
