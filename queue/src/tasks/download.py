@@ -112,21 +112,34 @@ def download_episode(
             / f"{anime_id} - S{parsed_season}E{parsed_ep_number}.mp4"
         )
 
-        downloaded = 0
+        file_exists = save_path.exists()
+        downloaded = save_path.stat().st_size if file_exists else 0
         headers = {}
 
-        supports_range, total_size = server_supports_range(download_link)
-        if supports_range:
-            logger.info("Server supports Range. Downloading partial file.")
-        else:
-            logger.info(
-                "Server does not support Range. Downloading full file."
-            )
+        resume_mode = False
 
-        if save_path.exists() and supports_range:
-            logger.info(f"File already exists: {save_path}")
-            downloaded = save_path.stat().st_size
-            headers["Range"] = f"bytes={downloaded}-"
+        supports_range, total_size = server_supports_range(download_link)
+        if supports_range and file_exists:
+            if downloaded < total_size:
+                resume_mode = True
+                headers = {"Range": f"bytes={downloaded}-"}
+                logger.info("Server supports Range. Downloading partial file.")
+            else:
+                logger.warning(
+                    "Local file size >= remote file size. "
+                    + "Redownloading from start."
+                )
+                save_path.unlink()
+                downloaded = 0
+        else:
+            if supports_range:
+                logger.warning(
+                    "Range supported but no local file. Starting new download."
+                )
+            else:
+                logger.warning(
+                    "Server does not support Range. Full download required."
+                )
 
         with requests.get(
             download_link, headers=headers, stream=True, timeout=(10, 300)
@@ -141,7 +154,7 @@ def download_episode(
 
             last_update_time = time.time()
 
-            mode = "ab" if downloaded > 0 and supports_range else "wb"
+            mode = "ab" if resume_mode else "wb"
 
             with open(save_path, mode) as f:
                 for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
@@ -195,6 +208,13 @@ def download_episode(
 
         logger.info(f"Download completed: {save_path}")
         return True
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"Error downloading {anime_id} - {episode_number}: {e}")
+        if e.response.status_code == 416:
+            logger.warning("Invalid range, restarting download from zero.")
+            if save_path.exists():
+                save_path.unlink()
+        return False
     except Exception as e:
         logger.error(f"Error downloading {anime_id} - {episode_number}: {e}")
         if save_path.exists():
