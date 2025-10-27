@@ -25,7 +25,23 @@ ANIMES_FOLDER = general_settings.ANIMES_FOLDER
 MAX_DOWNLOAD_RETRIES = general_settings.MAX_DOWNLOAD_RETRIES
 RETRY_DOWNLOAD_INTERVAL = general_settings.RETRY_DOWNLOAD_INTERVAL
 
-CHUNK_SIZE = 2048
+CHUNK_SIZE = 1024 * 1024
+MAX_CHUNK_RETRIES = 3
+UPDATE_INTERVAL = 1
+
+
+def server_supports_range(url, headers=None):
+    try:
+        response = requests.head(
+            url, headers=headers, allow_redirects=True, timeout=10
+        )
+        accept_ranges = response.headers.get("Accept-Ranges", "").lower()
+        content_length = int(response.headers.get("Content-Length", 0))
+        if accept_ranges == "bytes" and content_length > 0:
+            return True, content_length
+    except Exception as e:
+        print(f"Error checking Range support: {e}")
+    return False, None
 
 
 def update_episode_status(
@@ -66,91 +82,124 @@ def get_anime_episode_franchise(anime_id: str):
 
 def download_episode(
     job_id: str,
-    anime: str,
+    anime_id: str,
     season: int,
     episode_number: int,
     download_link: str,
     server: str,
 ):
     try:
-        with requests.get(download_link, stream=True) as response:
-            response.raise_for_status()
-            logger.info(
-                f"Downloading {anime} - {episode_number} from {server}"
+        parsed_season = str(season).zfill(2)
+        parsed_ep_number = str(episode_number).zfill(2)
+
+        franchise_id = None
+        with DatabaseSession() as db:
+            stmt = select(Anime).where(Anime.id == anime_id)
+            anime = db.execute(stmt).scalar_one()
+            franchise_id = anime.franchise_id
+
+        anime_folder = (
+            Path(ANIMES_FOLDER) / anime_id / f"Season {parsed_season}"
+        )
+        if franchise_id:
+            anime_folder = (
+                Path(ANIMES_FOLDER) / franchise_id / f"Season {parsed_season}"
             )
-            if response.status_code == 200:
-                total_size = int(response.headers.get("Content-Length", 0))
+        anime_folder.mkdir(parents=True, exist_ok=True)
 
-                franchise_id = None
-                with DatabaseSession() as db:
-                    stmt = (
-                        select(Episode)
-                        .where(
-                            Episode.anime_id == anime,
-                            Episode.ep_number == episode_number,
-                        )
-                        .options(
-                            selectinload(Episode.anime),
-                        )
-                    )
-                    episode = db.execute(stmt).scalar_one()
-                    episode.size = total_size
-                    franchise_id = episode.anime.franchise_id
-                    db.add(episode)
+        save_path = (
+            anime_folder
+            / f"{anime_id} - S{parsed_season}E{parsed_ep_number}.mp4"
+        )
 
-                parsed_season = str(season).zfill(2)
-                anime_folder = (
-                    Path(ANIMES_FOLDER) / anime / f"Season {parsed_season}"
-                )
-                if franchise_id:
-                    anime_folder = (
-                        Path(ANIMES_FOLDER)
-                        / franchise_id
-                        / f"Season {parsed_season}"
-                    )
-                anime_folder.mkdir(exist_ok=True)
+        downloaded = 0
+        headers = {}
 
-                parsed_ep_number = str(episode_number).zfill(2)
-                save_path = (
-                    anime_folder
-                    / f"{anime} - S{parsed_season}E{parsed_ep_number}.mp4"
-                )
+        supports_range, total_size = server_supports_range(download_link)
+        if supports_range:
+            logger.info("Server supports Range. Downloading partial file.")
+        else:
+            logger.info(
+                "Server does not support Range. Downloading full file."
+            )
 
-                with open(str(save_path), "wb") as f:
-                    downloaded = 0
-                    last_update_time = time.time()
-                    update_interval = 1
-                    for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
-                        if chunk:
+        if save_path.exists() and supports_range:
+            logger.info(f"File already exists: {save_path}")
+            downloaded = save_path.stat().st_size
+            headers["Range"] = f"bytes={downloaded}-"
+
+        with requests.get(
+            download_link, headers=headers, stream=True, timeout=(10, 300)
+        ) as response:
+            response.raise_for_status()
+            total_size = (
+                int(response.headers.get("Content-Length", 0)) + downloaded
+            )
+            logger.info(
+                f"Downloading {anime_id} - {episode_number} from {server}"
+            )
+
+            last_update_time = time.time()
+
+            mode = "ab" if downloaded > 0 and supports_range else "wb"
+
+            with open(save_path, mode) as f:
+                for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+                    if not chunk:
+                        continue
+
+                    for attemp in range(MAX_CHUNK_RETRIES):
+                        try:
                             f.write(chunk)
                             downloaded += len(chunk)
+                            break
+                        except Exception as e:
+                            logger.error(
+                                f"Chunk failed, attempt {attemp + 1}: {e}"
+                            )
+                            time.sleep(1)
+                    else:
+                        raise RuntimeError("Max retries reached for chunk")
 
-                            progress = downloaded / total_size * 100
-                            current_time = time.time()
-                            if (
-                                current_time - last_update_time
-                                > update_interval
-                            ):
-                                last_update_time = current_time
-                                notify_job(
-                                    job_id,
-                                    "DOWNLOADING",
-                                    {
-                                        "total": total_size,
-                                        "progress": progress,
-                                    },
-                                )
-                                logger.info(
-                                    f"Downloaded {anime} - {episode_number} "
-                                    + f"from {server} in {progress:.2f}%"
-                                )
-            else:
-                logger.error(f"Error downloading {anime}: {response.status}")
-                return False
+                    current_time = time.time()
+                    if current_time - last_update_time > UPDATE_INTERVAL:
+                        last_update_time = current_time
+                        progress = downloaded / total_size * 100
+                        notify_job(
+                            job_id,
+                            "DOWNLOADING",
+                            {
+                                "total": total_size,
+                                "progress": progress,
+                            },
+                        )
+                        logger.info(
+                            f"Downloaded {anime_id} - {episode_number} "
+                            + f"from {server} in {progress:.2f}%"
+                        )
+
+        with DatabaseSession() as db:
+            stmt = (
+                select(Episode)
+                .where(
+                    Episode.anime_id == anime_id,
+                    Episode.ep_number == episode_number,
+                )
+                .options(
+                    selectinload(Episode.anime),
+                )
+            )
+            episode = db.execute(stmt).scalar_one()
+            episode.size = total_size
+            db.add(episode)
+
+        logger.info(f"Download completed: {save_path}")
+        return True
     except Exception as e:
-        logger.error(f"Error downloading {anime} - {episode_number}: {e}")
+        logger.error(f"Error downloading {anime_id} - {episode_number}: {e}")
+        if save_path.exists():
+            logger.info(f"Partial file remains: {save_path}")
         return False
-    return True
 
 
 def download_anime_episode_controller(
@@ -188,6 +237,10 @@ def download_anime_episode_controller(
         )
         self.update_state(state="GETTING-LINK")
         season = 1
+        with DatabaseSession() as db:
+            stmt = select(Anime).where(Anime.id == anime_id)
+            anime = db.execute(stmt).scalar_one()
+            season = anime.season
         update_episode_status(
             anime_id, episode_number, "GETTING-LINK", self.request.id
         )

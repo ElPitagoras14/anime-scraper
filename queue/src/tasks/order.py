@@ -60,7 +60,7 @@ def order_franchise_controller(franchise_info: FranchiseInfo):
     logger.info(f"Ordering {franchise_id} franchise")
 
     franchise_folder = Path(ANIMES_FOLDER) / franchise_id
-    franchise_folder.mkdir(exist_ok=True)
+    franchise_folder.mkdir(parents=True, exist_ok=True)
 
     with DatabaseSession() as db:
         stmt = select(Anime).where(Anime.franchise_id == franchise_id)
