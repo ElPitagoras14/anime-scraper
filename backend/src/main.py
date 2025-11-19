@@ -19,7 +19,6 @@ from routes import router
 from watchgod import run_process
 from middleware import add_logging_and_timing
 
-PORT = general_settings.API_PORT
 ADMIN_USER = general_settings.ADMIN_USER
 ADMIN_PASS = general_settings.ADMIN_PASS
 
@@ -106,9 +105,9 @@ async def scalar_html():
 
 
 def start():
-    logger.info(f"Server starting on port {PORT}")
+    logger.info("Server starting on port 4002")
 
-    uvicorn.run(app="main:app", host="0.0.0.0", port=PORT, reload=False)
+    uvicorn.run(app="main:app", host="0.0.0.0", port=4002, reload=False)
 
 
 if __name__ == "__main__":

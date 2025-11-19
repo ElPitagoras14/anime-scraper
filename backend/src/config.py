@@ -3,8 +3,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class GeneralSettings(BaseSettings):
-    API_PORT: int = 4001
-
     ADMIN_USER: str
     ADMIN_PASS: str
 

@@ -7,8 +7,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       new URL("https://cdn.jkdesu.com/assets/images/**"),
       new URL("https://i.ibb.co/**"),
-    ]
-  }
+    ],
+  },
 };
 
 export default nextConfig;

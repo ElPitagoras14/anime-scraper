@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 
-const AUTH_SECRET = "secret";
+const AUTH_SECRET = process.env.AUTH_SECRET;
 
 const unprotectedPaths = ["/login", "/register", "/"];
 

@@ -1,78 +1,133 @@
 # Anime Scraper Monorepo
 
+## Table of Contents
+
+*   [Description](#description)
+*   [Technologies](#technologies)
+*   [How It Works](#how-it-works)
+*   [Setup](#setup)
+    *   [Requirements](#requirements)
+    *   [Docker Setup](#docker-setup)
+*   [Development Use](#development-use)
+    *   [Backend (`backend`) and Queue (`queue`)](#backend-backend-and-queue-queue)
+    *   [Frontend (`frontend`)](#frontend-frontend)
+    *   [VS Code Tasks](#vs-code-tasks)
+*   [Ports Used](#ports-used)
+*   [Roadmap](#roadmap)
+*   [Author](#author)
+
 ## Description
 
-**Anime Scraper** is a complete system for scraping, managing, and interacting with anime data. It consists of two core components:
+**Anime Scraper** is a comprehensive system for scraping, managing, and interacting with anime data. This monorepo is structured around three main components working together:
 
-- [**Anime Scraper API**:](/backend/README.md) A backend service built with FastAPI that handles data scraping, processing, and storage. It provides a structured API to retrieve and manage anime information and download links.
-
-- [**Anime Scraper Frontend**:](/frontend/README.md) A web application developed with Next.js that allows users to interact with the scraped data, manage collections, and access download links in an intuitive interface.
+- **Anime Scraper API** (`backend`): A backend service built with FastAPI. It handles data scraping, processing, and storage (PostgreSQL/Redis). It provides the structured API endpoints for data retrieval and management.
+- **Anime Scraper Frontend** (`frontend`): A web application developed with Next.js. It offers an intuitive interface for users to interact with the scraped data, manage collections, and access download features.
+- **Celery Workers** (`queue`): The asynchronous task processing system utilizing Celery and Redis. It is responsible for heavy operations like web scraping and server-side downloading tasks.
 
 Together, these components create a seamless solution for anime enthusiasts, simplifying the discovery and management of anime-related resources.
 
-## Requirements
+## Technologies
 
-- **General**:
-  - Docker
-- **API**:
-  - Python 3.7+
-  - pip
-  - PostgreSQL
-  - Redis
-  - Celery
-- **Frontend**:
-  - Node.js 14+
-  - npm or yarn
+This project leverages a variety of modern technologies:
 
-## Getting Started
+*   **Backend:** Python 3.10+, FastAPI, PostgreSQL, Redis, Celery, ani-scrapy
+*   **Frontend:** Next.js, React, TypeScript, NextAuth.js (AuthJS), npm/yarn
+*   **Containerization:** Docker, Docker Compose
+*   **Development Tools:** VS Code Tasks, uv (Python package manager)
 
-> [!IMPORTANT]
-> Rename `.env.example` to `.env` and fill it.
-> Rename `docker-compose.yaml.example` to `docker-compose.yaml` and change according your needs.
-> Ensure that you fill environment variables on `.env` and `docker-compose.yaml` files at the root of the project.
+## How It Works
 
-### Docker Use
+This system leverages several technologies to provide a seamless experience:
 
-1. Clone this repository:
+- **Scraping**: The core scraping logic is handled by the external Python library [ani-scrapy](https://pypi.org/project/ani-scrapy/), which performs web scraping on anime websites (like AnimeFLV and JKAnime) to extract metadata and download links.
+- **Data Persistence**: Anime metadata and user information are stored in a **PostgreSQL** database.
+- **Asynchronous Processing**: Heavy tasks, such as initial data scraping and server-side episode downloads, are queued and processed asynchronously using **Celery** workers, with **Redis** acting as the message broker.
+- **User Interface**: The data is served via the FastAPI backend to the **Next.js** frontend, which provides the user interface. Authentication is managed using **NextAuth.js (AuthJS)**.
 
-   ```bash
-   git clone https://github.com/ElPitagoras14/anime-scraper.git
-   cd anime-scraper
-   ```
+## Setup
 
-2. Build the images with the following command at the root of project:
+### Requirements
 
-   ```bash
-   docker-compose up -d
-   ```
+To run this project, you need the following tools installed on your system:
+
+-   **Docker** (Recommended for easy setup and deployment)
+-   **Python 3.10+** (For backend and queue development without Docker)
+-   **uv** or **pip** (Python package managers)
+-   **Node.js 14+** (For frontend development without Docker)
+-   **npm** or **yarn** (Node.js package managers)
+
+### Docker Setup
+
+The easiest way to get the entire system running is by using Docker Compose.
+
+1.  Ensure Docker is running on your system.
+2.  Build the images and start all services (API, Web, DB, Redis, Workers, Flower) using the following command at the root of the project:
+
+    ```bash
+    docker-compose up -d
+    ```
+
+3.  Access the services:
+    -   **Web Frontend**: `http://localhost:4000` (or the port defined in `WEB_PORT`)
+    -   **API Backend**: `http://localhost:4002` (or the port defined in `API_PORT`)
+    -   **Flower Dashboard (Celery)**: `http://localhost:4005` (or the port defined in `FLOWER_PORT`)
 
 > [!TIP]
-> If you are using `VSCode` you can use the `Deploy with docker-compose` task.
+> If you are using `VSCode`, you can utilize the `Deploy with docker-compose` task.
 
-### Development Use
+## Development Use
 
 > [!IMPORTANT]
-> You need a running `postgres` database and `redis` database for your backend.
+> You need running `postgres` and `redis` databases for the backend services. These can be started via Docker Compose (`docker-compose up -d postgres redis`) or run locally.
 
-Follow the specifir instruction for each project `Backend` and `Frontend` in their respective `README` files.
+#### Backend (`backend`) and Queue (`queue`)
 
-> [!TIP]
-> If you are using `VSCode` you can use the `Setup Dev Env`, `Run Backend`, `Run Frontend` and `Add Workers` tasks .
+1.  Navigate to the `backend` or `queue` directory:
+    ```bash
+    cd backend # or cd queue
+    ```
+2.  Install dependencies using `uv` (recommended) or `pip`:
+    ```bash
+    uv install # or pip install -r requirements.txt
+    ```
+
+#### Frontend (`frontend`)
+
+1.  Navigate to the `frontend` directory:
+    ```bash
+    cd frontend
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Run the development server:
+    ```bash
+    npm run dev
+    ```
+    The frontend will be accessible at `http://localhost:4000`.
+
+#### VS Code Tasks
+
+For easier development, VS Code tasks are defined in `.vscode/tasks.json`. You can run these tasks using `Ctrl+Shift+P` and typing `Run Task`.
 
 ## Ports Used
-|Service|Port Used|
-|-------|---------|
-|Web|`4000`|
-|Api|`4002`|
-|PostgresSQL|`4003`|
-|Redis|`4004`|
+
+| Service                   | Port Used |
+| ------------------------- | --------- |
+| Web                       | `4000`    |
+| Web Remote (Personal Use) | `4001`    |
+| Api                       | `4002`    |
+| PostgresSQL               | `4003`    |
+| Redis                     | `4004`    |
+| Flower                    | `4005`    |
 
 ## Roadmap
 
 - [x] Get download link with web scraping
 - [x] Create a web platform to manage and download anime epiosdes
 - [x] Change to server side downloading
-- [ ] Upload anime scraper code as a library
+- [x] Upload anime scraper code as a library
 
 ## Author
 
