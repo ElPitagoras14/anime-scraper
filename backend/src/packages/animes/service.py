@@ -84,7 +84,7 @@ async def add_new_anime(
     db: AsyncDatabaseSession, base_url: str, anime_id: str
 ):
     logger.debug(f"Adding anime to database: {anime_id}")
-    anime_info = await scraper.get_anime_info(anime_id, tab_timeout=300)
+    anime_info = await scraper.get_anime_info(anime_id)
     week_day = (
         anime_info.next_episode_date.strftime("%A")
         if anime_info.next_episode_date
