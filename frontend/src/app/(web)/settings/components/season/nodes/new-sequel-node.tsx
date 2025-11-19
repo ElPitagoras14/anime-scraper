@@ -30,7 +30,7 @@ export default function NewSequelNode({ id }: NewSequelNodeProps) {
     label: "",
   });
 
-  const { setNodes, getNode, setEdges, getNodes } = useReactFlow();
+  const { setNodes, getNode, setEdges } = useReactFlow();
 
   const { data } = useQuery({
     queryKey: ["animes"],

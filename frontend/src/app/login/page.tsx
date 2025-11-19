@@ -96,7 +96,7 @@ export default function Login() {
       try {
         await navigator.clipboard.writeText(text);
         toast.success("Copied to clipboard");
-      } catch (error) {
+      } catch {
         toast.error("Failed to copy");
       }
     } else {
@@ -110,7 +110,7 @@ export default function Login() {
       try {
         document.execCommand("copy");
         toast.success("Copied to clipboard");
-      } catch (err) {
+      } catch {
         toast.error("Failed to copy");
       } finally {
         document.body.removeChild(textarea);

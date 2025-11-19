@@ -4,9 +4,16 @@ dotenv.config({ path: "../.env" });
 
 const nextConfig: NextConfig = {
   images: {
+    unoptimized: true,
     remotePatterns: [
-      new URL("https://cdn.jkdesu.com/assets/images/**"),
-      new URL("https://i.ibb.co/**"),
+      {
+        protocol: "https",
+        hostname: "cdn.jkdesu.com",
+      },
+      {
+        protocol: "https",
+        hostname: "i.ibb.co",
+      },
     ],
   },
 };
