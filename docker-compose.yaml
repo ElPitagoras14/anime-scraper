@@ -41,6 +41,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - ANIMES_FOLDER=${ANIMES_FOLDER}
     ports:
       - "${API_PORT:-4002}:8000"
     environment:
@@ -70,6 +72,8 @@ services:
     build:
       context: ./queue
       dockerfile: Dockerfile
+      args:
+        - ANIMES_FOLDER=${ANIMES_FOLDER}
     environment:
       - REDIS_URL=redis://redis:6379
       - MAX_DOWNLOAD_RETRIES=${MAX_DOWNLOAD_RETRIES}
