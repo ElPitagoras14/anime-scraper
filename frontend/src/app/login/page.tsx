@@ -79,7 +79,8 @@ export default function Login() {
           } else {
             toast.error("Something went wrong");
           }
-        } else {
+        } else if (response?.ok) {
+          toast.success("Logged in successfully");
           router.push("/home");
         }
       } catch (error) {
@@ -90,9 +91,31 @@ export default function Login() {
     }
   );
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+  const copyToClipboard = async (text: string) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast.success("Copied to clipboard");
+      } catch (error) {
+        toast.error("Failed to copy");
+      }
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+
+      try {
+        document.execCommand("copy");
+        toast.success("Copied to clipboard");
+      } catch (err) {
+        toast.error("Failed to copy");
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
   };
 
   return (
@@ -155,8 +178,7 @@ export default function Login() {
               ))}
             </div>
             <Button type="button" className="cursor-pointer" onClick={onSubmit}>
-              Login{" "}
-              {isLoading && <Spinner className="size-5" />}
+              Login {isLoading && <Spinner className="size-5" />}
             </Button>
             <div className="flex justify-center gap-4">
               <Link

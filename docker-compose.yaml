@@ -1,4 +1,5 @@
-version: "3"
+version: "3.9"
+
 services:
   web:
     build:
@@ -8,19 +9,40 @@ services:
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
         - NEXTAUTH_URL=${NEXTAUTH_URL}
     ports:
-      - "${WEB_PORT}:3000"
+      - "${WEB_PORT:-4000}:3000"
     environment:
       - API_URL=http://api:8000
       - AUTH_SECRET=${AUTH_SECRET}
-    container_name: web
+    container_name: "${COMPOSE_PROJECT_NAME}-web"
     restart: unless-stopped
+    depends_on:
+      - api
+
+  web-remote:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL_REMOTE}
+        - NEXTAUTH_URL=${NEXTAUTH_URL_REMOTE}
+    ports:
+      - "${WEB_REMOTE_PORT:-4001}:3000"
+    environment:
+      - API_URL=http://api:8000
+      - AUTH_SECRET=${AUTH_SECRET}
+    container_name: "${COMPOSE_PROJECT_NAME}-web-remote"
+    restart: unless-stopped
+    profiles:
+      - remote
+    depends_on:
+      - api
 
   api:
     build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "${API_PORT}:8000"
+      - "${API_PORT:-4002}:8000"
     environment:
       - API_PORT=8000
       - ADMIN_USER=${ADMIN_USER}
@@ -32,47 +54,16 @@ services:
       - ANIMES_FOLDER=${ANIMES_FOLDER}
       - ACCESS_TOKEN_EXP_MIN=${ACCESS_TOKEN_EXP_MIN}
       - REFRESH_TOKEN_EXP_DAY=${REFRESH_TOKEN_EXP_DAY}
-      # Uncomment the following lines to enable logging
-      # - LOG_APP_PATH=${LOG_FOLDER}/app.log
-      # - LOG_ERROR_PATH=${LOG_FOLDER}/error.log
+      # - LOG_FOLDER=${LOG_FOLDER}
     volumes:
-      - ${DOCKER_DATA}/animes:${ANIMES_FOLDER}
-      # Uncomment the following line to enable logging
-      # - ${DOCKER_DATA}/api-logs:${LOG_FOLDER}
+      - ${DOCKER_DATA_FOLDER}/animes:${ANIMES_FOLDER}
+      # - ${DOCKER_DATA_FOLDER}/logs:${LOG_FOLDER}
     depends_on:
-      - db
-      - redis
-    container_name: api
-    restart: unless-stopped
-
-  flower:
-    image: mher/flower
-    command: celery flower --persistent=True
-    ports:
-      - "4002:5555"
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379
-      - FLOWER_PORT=5555
-    container_name: flower
-
-  db:
-    image: postgres:17.0
-    ports:
-      - "4003:5432"
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    volumes:
-      - ./backend/src/databases/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-    container_name: db
-    restart: unless-stopped
-
-  redis:
-    image: redis:6.2
-    ports:
-      - "4004:6379"
-    container_name: redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    container_name: "${COMPOSE_PROJECT_NAME}-api"
     restart: unless-stopped
 
   celery-worker:
@@ -86,26 +77,55 @@ services:
       - ANIMES_FOLDER=${ANIMES_FOLDER}
       - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     volumes:
-      - ${DOCKER_DATA}/animes:${ANIMES_FOLDER}
+      - ${DOCKER_DATA_FOLDER}/animes:${ANIMES_FOLDER}
     depends_on:
-      - db
-      - redis
-    container_name: celery-worker
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    container_name: "${COMPOSE_PROJECT_NAME}-celery"
     restart: unless-stopped
 
-  web-remote:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL_REMOTE}
-        - NEXTAUTH_URL=${NEXTAUTH_URL_REMOTE}
+  flower:
+    image: mher/flower
+    command: celery flower --persistent=True
     ports:
-      - "${WEB_REMOTE_PORT}:3000"
+      - "${FLOWER_PORT:-4005}:5555"
     environment:
-      - API_URL=http://api:8000
-      - AUTH_SECRET=${AUTH_SECRET}
-    container_name: web-remote
+      - CELERY_BROKER_URL=redis://redis:6379
+      - FLOWER_PORT=5555
+    container_name: "${COMPOSE_PROJECT_NAME}-flower"
     restart: unless-stopped
-    profiles:
-      - remote
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:18.1-bookworm
+    ports:
+      - "${POSTGRES_PORT:-}:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./backend/src/databases/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    container_name: "${COMPOSE_PROJECT_NAME}-db"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      retries: 5
+      timeout: 5s
+
+  redis:
+    image: redis:8.4.0-bookworm
+    ports:
+      - "${REDIS_PORT:-}:6379"
+    container_name: "${COMPOSE_PROJECT_NAME}-redis"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
+      timeout: 5s

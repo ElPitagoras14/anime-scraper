@@ -50,12 +50,6 @@
       "options": {
         "cwd": "${workspaceFolder}/queue/src"
       }
-    },
-    {
-      "label": "Deploy with docker-compose",
-      "type": "shell",
-      "command": "docker-compose",
-      "args": ["up", "-d", "--build"]
     }
   ]
 }
