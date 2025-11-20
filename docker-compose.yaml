@@ -43,6 +43,7 @@ services:
       dockerfile: Dockerfile
       args:
         - ANIMES_FOLDER=${ANIMES_FOLDER}
+    init: true
     ports:
       - "${API_PORT:-4002}:8000"
     environment:
@@ -74,6 +75,7 @@ services:
       dockerfile: Dockerfile
       args:
         - ANIMES_FOLDER=${ANIMES_FOLDER}
+    init: true
     environment:
       - REDIS_URL=redis://redis:6379
       - MAX_DOWNLOAD_RETRIES=${MAX_DOWNLOAD_RETRIES}
