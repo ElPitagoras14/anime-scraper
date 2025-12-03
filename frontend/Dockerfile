@@ -21,6 +21,8 @@ ENV NEXTAUTH_URL=${NEXTAUTH_URL}
 # Build Next.js application
 RUN npm run build
 
+RUN npm prune --production
+
 # Stage 2: Production
 FROM node:20-alpine AS runner
 
