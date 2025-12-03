@@ -40,7 +40,7 @@ export const ProgressCell = memo(
     if (effectiveStatus === "SUCCESS") {
       return (
         <div className="flex flex-col justify-center items-center">
-          <div className="w-70" />
+          <div className="max-w-70" />
           <Button
             variant="ghost"
             size="icon"

@@ -27,6 +27,7 @@ import { useDebounce } from "use-debounce";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
+import MobileLinks from "./components/mobile-links";
 
 const updateUsername = async (username: string) => {
   const options = {
@@ -96,8 +97,8 @@ export default function Profile() {
   const canUpdate = data?.data?.payload && username !== session?.user.username;
 
   return (
-    <div className="flex flex-colitems-center justify-center">
-      <div className="w-[65%] flex flex-col gap-y-6">
+    <div className="flex flex-col items-center justify-center">
+      <div className="flex flex-col gap-y-6 w-[85%]  lg:w-[65%]">
         <span className="text-3xl font-semibold">Profile</span>
         <div className="flex flex-row items-center gap-x-10">
           <div className="rounded-full bg-muted/20">
@@ -187,6 +188,7 @@ export default function Profile() {
             <ChangePassword />
           </div>
         </div>
+        <MobileLinks className="lg:hidden"/>
       </div>
     </div>
   );

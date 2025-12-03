@@ -21,7 +21,11 @@ interface Statistics {
   inEmissionAnimes: number;
 }
 
-export default function Statistics() {
+interface StatisticsProps {
+  className?: string;
+}
+
+export default function Statistics({ className }: StatisticsProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["statistics"],
     queryFn: () => getStatistics(),
@@ -33,30 +37,36 @@ export default function Statistics() {
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="flex flex-col gap-y-4">
-          <span className="text-sm font-semibold">Statistics</span>
-          <Skeleton className="h-10 w-40" />
-          <Skeleton className="h-10 w-40" />
-          <Skeleton className="h-10 w-40" />
+        <CardContent className="flex flex-col gap-y-4 lg:gap-y-3">
+          <span className="text-sm md:text-base lg:text-lg font-semibold">
+            Statistics
+          </span>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton className="h-10 min-w-30 w-full" />
+          ))}
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
+    <Card className={className}>
       <CardContent className="flex flex-col gap-y-2">
-        <span className="text-sm font-semibold">Statistics</span>
+        <span className="text-sm md:text-base lg:text-lg font-semibold">
+          Statistics
+        </span>
         <div className="flex flex-col gap-y-2">
-          <p className="text-base font-semibold">Saved animes</p>
+          <p className="text-sm xl:text-base font-semibold">Saved animes</p>
           <Badge className="text-sm">{statistics.savedAnimes}</Badge>
         </div>
         <div className="flex flex-col gap-y-2">
-          <p className="text-base font-semibold">Downloaded episodes</p>
+          <p className="text-sm xl:text-base font-semibold">
+            Downloaded episodes
+          </p>
           <Badge className="text-sm">{statistics.downloadedEpisodes}</Badge>
         </div>
         <div className="flex flex-col gap-y-2">
-          <p className="text-base font-semibold">Emission animes</p>
+          <p className="text-sm xl:text-base font-semibold">Emission animes</p>
           <Badge className="text-sm">{statistics.inEmissionAnimes}</Badge>
         </div>
       </CardContent>

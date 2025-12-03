@@ -32,9 +32,10 @@ const getLastDownloadEpisodes = () => {
 
 interface LastDownloadProps {
   role: string;
+  className?: string;
 }
 
-export default function LastDownload({ role }: LastDownloadProps) {
+export default function LastDownload({ role, className }: LastDownloadProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["last-download"],
     queryFn: () => getLastDownloadEpisodes(),
@@ -45,22 +46,26 @@ export default function LastDownload({ role }: LastDownloadProps) {
 
   if (isLoading) {
     return (
-      <Card className="col-span-3">
-        <CardContent className="flex flex-col gap-y-2">
-          <span className="text-sm font-semibold">Last Downloaded</span>
-          <Skeleton className="h-18 w-full" />
-          <Skeleton className="h-18 w-full" />
-          <Skeleton className="h-18 w-full" />
+      <Card className={className}>
+        <CardContent className="flex flex-col gap-y-4 lg:gap-y-3">
+          <span className="text-sm md:text-base lg:text-lg font-semibold">
+            Last Downloaded
+          </span>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton className="h-12 lg:h-16 min-w-70 w-full" />
+          ))}
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="col-span-3">
-      <CardContent className="flex flex-col gap-y-4">
-        <span className="text-sm font-semibold">Last Downloaded</span>
-        <ItemGroup className="grid grid-cols-2 gap-x-4 gap-y-2">
+    <Card className={className}>
+      <CardContent className="flex flex-col gap-y-4 lg:gap-y-3">
+        <span className="text-sm md:text-base lg:text-lg font-semibold">
+          Last Downloaded
+        </span>
+        <ItemGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {lastDownloads?.map((episode: EpisodeDownload) => (
             <Item key={episode.id} variant="outline">
               <Tooltip key={episode.id}>

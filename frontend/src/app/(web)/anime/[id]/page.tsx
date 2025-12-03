@@ -86,44 +86,51 @@ export default function Anime() {
 
   if (isLoading || !anime || minutesAgo === null || minutesToWait === null) {
     return (
-      <div className="grid grid-cols-4 gap-x-8 px-12">
-        <div className="flex flex-col gap-y-4">
-          <Skeleton className="w-full h-96" />
-          <Skeleton className="w-full h-20" />
+      <>
+        <div className="lg:hidden mb-4">
+          <span className="text-2xl font-semibold animate-pulse">
+            Longs animes will take a long time to load the first time...
+          </span>
         </div>
-        <div className="flex flex-col col-span-3 gap-y-4 ml-16">
-          <div className="flex flex-row justify-between">
+        <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 px-2 xl:px-12 gap-y-4">
+          <div className="flex flex-col gap-y-4 items-center lg:items-start">
+            <Skeleton className="w-60 h-96" />
+            <Skeleton className="w-60 h-20" />
+          </div>
+          <div className="flex flex-col col-span-1 lg:col-span-2 xl:col-span-3 gap-y-4">
+            <div className="hidden lg:flex flex-row justify-between ">
+              <div className="flex flex-col gap-y-4">
+                <span className="text-2xl font-semibold animate-pulse  text-wrap">
+                  Longs animes will take a long time to load the first time...
+                </span>
+                <Skeleton className="w-full h-18" />
+              </div>
+            </div>
             <div className="flex flex-col gap-y-4">
-              <span className="text-2xl font-semibold animate-pulse">
-                Longs animes will take a long time to load the first time...
-              </span>
-              <Skeleton className="w-full h-18" />
-            </div>
-          </div>
-          <div className="flex flex-col gap-y-4">
-            <div className="flex flex-col gap-y-2">
-              <Skeleton className="w-56 h-10" />
-              <Skeleton className="w-full h-36" />
-            </div>
-            <div className="flex flex-col gap-y-2">
-              <Skeleton className="w-56 h-10" />
-              <Skeleton className="w-96 h-12" />
-              <Skeleton className="w-96 h-12" />
-              <Skeleton className="w-96 h-12" />
+              <div className="flex flex-col gap-y-2">
+                <Skeleton className="w-56 h-10" />
+                <Skeleton className="w-full h-36" />
+              </div>
+              <div className="flex flex-col gap-y-2">
+                <Skeleton className="w-56 h-10" />
+                <Skeleton className="w-96 h-12" />
+                <Skeleton className="w-96 h-12" />
+                <Skeleton className="w-96 h-12" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="grid grid-cols-4 gap-x-8 px-12">
+    <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 px-2 gap-x-12 xl:px-12 gap-y-4 pb-20">
       <SidebarInfo anime={anime} />
-      <div className="flex flex-col col-span-3 gap-y-4 ml-16">
+      <div className="flex flex-col col-span-1 lg:col-span-2 xl:col-span-3 gap-y-4">
         <div className="flex flex-row justify-between">
           <div className="flex flex-col gap-y-1">
-            <span className="text-3xl font-semibold">{anime.title}</span>
+            <span className="text-xl md:text-2xl lg:text-3xl font-semibold">{anime.title}</span>
             <span className="text-sm text-muted-foreground">
               Last update {minutesAgo} minutes ago
             </span>
@@ -148,11 +155,11 @@ export default function Anime() {
           </div>
         </div>
         <Tabs defaultValue="information">
-          <TabsList className="h-10">
-            <TabsTrigger value="information" className="w-56 text-base">
+          <TabsList className="w-full lg:w-124 h-10">
+            <TabsTrigger value="information" className="w-full text-base">
               Information
             </TabsTrigger>
-            <TabsTrigger value="episodes" className="w-56 text-base">
+            <TabsTrigger value="episodes" className="w-full text-base">
               Episodes
             </TabsTrigger>
           </TabsList>
