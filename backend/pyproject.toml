@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10.14"
 dependencies = [
     "ani-scrapy==0.1.18",
+    "asyncpg>=0.31.0",
     "bcrypt>=4.0,<4.1",
     "celery>=5.5.3",
     "fastapi[standard]>=0.119.0",
