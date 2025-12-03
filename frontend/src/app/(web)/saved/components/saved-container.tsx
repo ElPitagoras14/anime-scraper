@@ -83,7 +83,7 @@ export default function SavedContainer({ items }: SavedContainerProps) {
           </Tooltip>
         )}
       </div>
-      <div className="flex flex-row flex-wrap gap-x-9 gap-y-4">
+      <div className="flex flex-row flex-wrap justify-between lg:justify-start lg:gap-x-9 gap-y-4 pb-10">
         {sortedItems.map((item: AnimeInfo) => (
           <AnimeCard key={item.id} animeInfo={item} />
         ))}

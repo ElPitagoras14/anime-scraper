@@ -1,4 +1,5 @@
 import AnimeCard, { AnimeInfo } from "@/components/anime-card";
+import AnimeCardSkeleton from "@/components/anime-card-skeleton";
 import { getApiServer } from "@/lib/api-server";
 
 interface PageProps {
@@ -34,7 +35,7 @@ export default async function Page({ params }: PageProps) {
       <span className="text-3xl font-semibold">
         Search results for &quot;{decoded}&quot;
       </span>
-      <div className="flex flex-row flex-wrap gap-x-9 gap-y-4">
+      <div className="flex flex-row flex-wrap justify-between lg:justify-start lg:gap-x-9 gap-y-4 pb-14">
         {items.map((item: AnimeInfo) => (
           <AnimeCard key={item.id} animeInfo={item} />
         ))}

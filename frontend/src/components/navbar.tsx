@@ -42,11 +42,11 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="w-full flex flex-row justify-between py-3 px-6 border-b-2 sticky top-0 z-10 bg-background">
+<nav className="w-full flex flex-row justify-between py-3 px-6 border-b-2 sticky top-0 z-10 bg-background">
       <div className="flex flex-row gap-x-4 items-center">
         <TelescopeIcon className="w-8 h-8" />
         <span
-          className="text-2xl font-semibold cursor-pointer"
+          className="text-2xl font-semibold cursor-pointer hidden sm:block"
           onClick={() => router.push("/home")}
         >
           Ani Seek
@@ -70,32 +70,30 @@ export default function Navbar() {
           }}
         />
         <div
-          className="flex flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500"
+          className="flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500 hidden sm:flex"
           onClick={() => router.push("/home")}
         >
           <HomeIcon className="w-6 h-6" />
           <span className="text-base">Home</span>
         </div>
         <div
-          className="flex flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500"
+          className="flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500 hidden sm:flex"
           onClick={() => router.push("/saved")}
         >
           <BookmarkIcon className="w-6 h-6" />
           <span className="text-base">Saved</span>
         </div>
         <div
-          className="flex flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500"
+          className="flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500 hidden sm:flex"
           onClick={() => router.push("/calendar")}
         >
           <CalendarIcon className="w-6 h-6" />
           <span className="text-base">Calendar</span>
         </div>
-        <Separator orientation="vertical" className="pl-0.5" />
+        <Separator orientation="vertical" className="pl-0.5 hidden sm:block" />
         <DropdownMenu>
-          <DropdownMenuTrigger
-            asChild
-          >
-            <div className="flex flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500">
+          <DropdownMenuTrigger asChild>
+            <div className="flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500 hidden sm:flex">
               <UserRoundIcon className="w-6 h-6" />
               <span className="text-base">Profile</span>
             </div>
