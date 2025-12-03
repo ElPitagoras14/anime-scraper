@@ -42,9 +42,9 @@ export default function Navbar() {
   };
 
   return (
-<nav className="w-full flex flex-row justify-between py-3 px-6 border-b-2 sticky top-0 z-10 bg-background">
+    <nav className="w-full flex flex-row justify-between py-2 lg:py-3 px-3 lg:px-6 border-b-2 sticky top-0 z-10 bg-background">
       <div className="flex flex-row gap-x-4 items-center">
-        <TelescopeIcon className="w-8 h-8" />
+        <TelescopeIcon className="lg:w-8 lg:h-8 w-6 h-6" />
         <span
           className="text-2xl font-semibold cursor-pointer hidden sm:block"
           onClick={() => router.push("/home")}
@@ -52,7 +52,7 @@ export default function Navbar() {
           Ani Seek
         </span>
       </div>
-      <div className="flex flex-row items-center gap-x-3.5">
+      <div className="flex flex-row items-center gap-x-1 lg:gap-x-3.5">
         <Input
           placeholder="Search anime"
           value={query}
@@ -62,7 +62,7 @@ export default function Navbar() {
               redirectToSearch();
             }
           }}
-          className="w-56 h-10"
+          className="lg:w-56 lg:h-10 w-48 h-9"
           iconInfo={{
             position: "right",
             icon: SearchIcon,
@@ -107,9 +107,7 @@ export default function Navbar() {
               <DropdownMenuItem onClick={() => router.push("/downloads")}>
                 Downloads
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push("/settings")}
-              >
+              <DropdownMenuItem onClick={() => router.push("/settings")}>
                 Settings
               </DropdownMenuItem>
             </DropdownMenuGroup>

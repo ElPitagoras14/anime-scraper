@@ -32,9 +32,10 @@ const getLastDownloadEpisodes = () => {
 
 interface LastDownloadProps {
   role: string;
+  className?: string;
 }
 
-export default function LastDownload({ role }: LastDownloadProps) {
+export default function LastDownload({ role, className }: LastDownloadProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["last-download"],
     queryFn: () => getLastDownloadEpisodes(),
@@ -57,7 +58,7 @@ export default function LastDownload({ role }: LastDownloadProps) {
   }
 
   return (
-    <Card className="col-span-3">
+    <Card className={className}>
       <CardContent className="flex flex-col gap-y-4">
         <span className="text-sm font-semibold">Last Downloaded</span>
         <ItemGroup className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">

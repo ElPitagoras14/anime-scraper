@@ -19,7 +19,7 @@ export default async function Page() {
   if (items.length === 0) {
     return (
       <div className="flex flex-col gap-y-6">
-        <span className="text-3xl font-semibold">
+        <span className="text-xl lg:text-3xl font-semibold">
           You haven&apos;t saved any animes yet!
         </span>
       </div>
@@ -28,7 +28,7 @@ export default async function Page() {
 
   return (
     <div className="flex flex-col gap-y-4">
-      <span className="text-3xl font-semibold">Saved Animes</span>
+      <span className="text-xl lg:text-3xl font-semibold">Saved Animes</span>
       <SavedContainer items={items} />
     </div>
   );

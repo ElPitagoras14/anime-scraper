@@ -10,10 +10,10 @@ export default async function Home() {
 
   return (
     <div className="flex justify-center">
-      <div className="grid grid-cols-4 gap-4">
-        <Statistics />
-        <LastDownload role={session.user.role} />
-        <InEmission/>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-[90%] lg:w-auto">
+        <Statistics className=""/>
+        <LastDownload role={session.user.role} className="lg:col-span-3"/>
+        <InEmission className="lg:col-span-4"/>
       </div>
     </div>
   );

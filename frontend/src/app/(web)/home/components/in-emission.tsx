@@ -27,7 +27,11 @@ const weekDays = [
   "Saturday",
 ];
 
-export default function InEmission() {
+interface InEmissionProps {
+  className?: string;
+}
+
+export default function InEmission({ className }: InEmissionProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["in-emission"],
     queryFn: () => getInEmission(),
@@ -56,7 +60,7 @@ export default function InEmission() {
   }
 
   return (
-    <Card className="col-span-4">
+    <Card className={className}>
       <CardContent className="flex flex-col gap-y-4">
         <span className="text-sm font-semibold">Today&apos;s Emitted</span>
         <div className="flex flex-row">

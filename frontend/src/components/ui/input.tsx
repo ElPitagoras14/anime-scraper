@@ -35,7 +35,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       {iconInfo && iconInfo.position === "right" && (
         <div className="absolute inset-y-0 end-3 flex items-center ps-3">
           <iconInfo.icon
-            className="h-5 w-5 text-muted-foreground hover:cursor-pointer z-20"
+            className="lg:h-5 lg:w-5 h-4 w-4 text-muted-foreground hover:cursor-pointer z-20"
             onClick={iconInfo.fn}
           />
         </div>

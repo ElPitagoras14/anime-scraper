@@ -31,8 +31,8 @@ export default async function Page({ params }: PageProps) {
   const decoded = decodeURIComponent(query);
 
   return (
-    <div className="flex flex-col gap-y-10">
-      <span className="text-3xl font-semibold">
+    <div className="flex flex-col gap-y-4 lg:gap-y-10">
+      <span className="text-xl lg:text-3xl font-semibold">
         Search results for &quot;{decoded}&quot;
       </span>
       <div className="flex flex-row flex-wrap justify-between lg:justify-start lg:gap-x-9 gap-y-4 pb-14">

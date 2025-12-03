@@ -21,7 +21,11 @@ interface Statistics {
   inEmissionAnimes: number;
 }
 
-export default function Statistics() {
+interface StatisticsProps {
+  className?: string;
+}
+
+export default function Statistics({ className }: StatisticsProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["statistics"],
     queryFn: () => getStatistics(),
@@ -44,7 +48,7 @@ export default function Statistics() {
   }
 
   return (
-    <Card>
+    <Card className={className}>
       <CardContent className="flex flex-col gap-y-2">
         <span className="text-sm font-semibold">Statistics</span>
         <div className="flex flex-col gap-y-2">
