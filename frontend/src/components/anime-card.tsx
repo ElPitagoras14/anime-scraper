@@ -112,10 +112,10 @@ export default function AnimeCard({ animeInfo }: AnimeCardProps) {
     >
       <div className="relative w-46 h-64">
         <Image
-          className="rounded-md object-cover"
           src={animeInfo.poster}
           alt={animeInfo.title}
           fill
+          className="rounded-md object-cover"
         />
         {isLoading ? (
           <div className="absolute top-1 right-1">

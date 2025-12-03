@@ -42,17 +42,17 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="w-full flex flex-row justify-between py-3 px-6 border-b-2 sticky top-0 z-10 bg-background">
+    <nav className="w-full flex flex-row justify-between py-2 lg:py-3 px-3 lg:px-6 border-b-2 sticky top-0 z-10 bg-background">
       <div className="flex flex-row gap-x-4 items-center">
-        <TelescopeIcon className="w-8 h-8" />
+        <TelescopeIcon className="lg:w-8 lg:h-8 w-6 h-6" />
         <span
-          className="text-2xl font-semibold cursor-pointer"
+          className="text-2xl font-semibold cursor-pointer hidden lg:block"
           onClick={() => router.push("/home")}
         >
           Ani Seek
         </span>
       </div>
-      <div className="flex flex-row items-center gap-x-3.5">
+      <div className="flex flex-row items-center gap-x-1 lg:gap-x-3.5">
         <Input
           placeholder="Search anime"
           value={query}
@@ -62,7 +62,7 @@ export default function Navbar() {
               redirectToSearch();
             }
           }}
-          className="w-56 h-10"
+          className="lg:w-56 lg:h-10 w-48 h-9"
           iconInfo={{
             position: "right",
             icon: SearchIcon,
@@ -70,32 +70,30 @@ export default function Navbar() {
           }}
         />
         <div
-          className="flex flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500"
+          className="flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500 hidden lg:flex"
           onClick={() => router.push("/home")}
         >
           <HomeIcon className="w-6 h-6" />
           <span className="text-base">Home</span>
         </div>
         <div
-          className="flex flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500"
+          className="flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500 hidden lg:flex"
           onClick={() => router.push("/saved")}
         >
           <BookmarkIcon className="w-6 h-6" />
           <span className="text-base">Saved</span>
         </div>
         <div
-          className="flex flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500"
+          className="flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500 hidden lg:flex"
           onClick={() => router.push("/calendar")}
         >
           <CalendarIcon className="w-6 h-6" />
           <span className="text-base">Calendar</span>
         </div>
-        <Separator orientation="vertical" className="pl-0.5" />
+        <Separator orientation="vertical" className="pl-0.5 hidden lg:block" />
         <DropdownMenu>
-          <DropdownMenuTrigger
-            asChild
-          >
-            <div className="flex flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500">
+          <DropdownMenuTrigger asChild>
+            <div className="flex-row items-center gap-x-2 cursor-pointer hover:text-indigo-500 hidden lg:flex">
               <UserRoundIcon className="w-6 h-6" />
               <span className="text-base">Profile</span>
             </div>
@@ -109,9 +107,7 @@ export default function Navbar() {
               <DropdownMenuItem onClick={() => router.push("/downloads")}>
                 Downloads
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push("/settings")}
-              >
+              <DropdownMenuItem onClick={() => router.push("/settings")}>
                 Settings
               </DropdownMenuItem>
             </DropdownMenuGroup>

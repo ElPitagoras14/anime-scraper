@@ -199,10 +199,12 @@ export default function Downloads() {
   }, [serverData, setJobIds]);
 
   return (
-    <div className="flex flex-col gap-y-10">
-      <span className="text-3xl font-semibold">Downloads</span>
-      <div className="flex flex-col gap-y-4">
-        <div>
+    <div className="flex flex-col gap-y-4">
+      <div className="flex flex-row lg:flex-col gap-y-4 justify-between">
+        <span className="text-xl md:text-2xl lg:text-3xl font-semibold">
+          Downloads
+        </span>
+        <div className="">
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -250,19 +252,19 @@ export default function Downloads() {
             </PopoverContent>
           </Popover>
         </div>
-        <DownloadTable
-          data={serverData?.data?.payload?.items || []}
-          role={user?.role || "guest"}
-          isLoading={isLoading}
-          handleForceDownload={handleForceDownload}
-          handleDeleteDownload={handleDeleteDownload}
-          serverInfo={{
-            total: serverData?.data?.payload?.total || 0,
-            pagination,
-            setPagination,
-          }}
-        />
       </div>
+      <DownloadTable
+        data={serverData?.data?.payload?.items || []}
+        role={user?.role || "guest"}
+        isLoading={isLoading}
+        handleForceDownload={handleForceDownload}
+        handleDeleteDownload={handleDeleteDownload}
+        serverInfo={{
+          total: serverData?.data?.payload?.total || 0,
+          pagination,
+          setPagination,
+        }}
+      />
     </div>
   );
 }

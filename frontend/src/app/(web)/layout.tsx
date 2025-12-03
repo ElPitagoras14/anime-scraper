@@ -1,4 +1,5 @@
 import Navbar from "@/components/navbar";
+import FooterNavbar from "@/components/footer-navbar";
 
 export default function WebLayout({
   children,
@@ -8,7 +9,8 @@ export default function WebLayout({
   return (
     <>
       <Navbar />
-      <main className="px-24 py-8">{children}</main>
+      <main className="px-4 py-4 sm:px-12 sm:py-8">{children}</main>
+      <FooterNavbar />
     </>
   );
 }

@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { InEmissionAnime } from "../../calendar/page";
 import Image from "next/image";
 import Link from "next/link";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 const getInEmission = () => {
   const options = {
@@ -27,7 +28,11 @@ const weekDays = [
   "Saturday",
 ];
 
-export default function InEmission() {
+interface InEmissionProps {
+  className?: string;
+}
+
+export default function InEmission({ className }: InEmissionProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["in-emission"],
     queryFn: () => getInEmission(),
@@ -42,13 +47,15 @@ export default function InEmission() {
 
   if (isLoading) {
     return (
-      <Card className="col-span-4">
+      <Card className={className}>
         <CardContent className="flex flex-col gap-y-4">
-          <span className="text-sm font-semibold">Today&apos;s Emitted</span>
-          <div className="flex flex-row gap-x-4">
-            <Skeleton className="h-50 w-40" />
-            <Skeleton className="h-50 w-40" />
-            <Skeleton className="h-50 w-40" />
+          <span className="text-sm md:text-base lg:text-lg font-semibold">
+            Today&apos;s Emitted
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-4 justify-items-center">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton className="h-46 w-32" />
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -56,32 +63,39 @@ export default function InEmission() {
   }
 
   return (
-    <Card className="col-span-4">
+    <Card className={className}>
       <CardContent className="flex flex-col gap-y-4">
-        <span className="text-sm font-semibold">Today&apos;s Emitted</span>
-        <div className="flex flex-row">
-          {todaysAnimes.map((anime: InEmissionAnime) => {
-            return (
-              <div
-                className="flex flex-col justify-start items-center gap-y-2"
-                key={anime.id}
-              >
-                <Link href={`/anime/${anime.id}`}>
-                  <Image
-                    src={anime.poster}
-                    title={anime.title}
-                    alt={anime.title}
-                    width={130}
-                    height={180}
-                    className="rounded-md"
-                  />
-                </Link>
-                <span className="text-center text-sm font-semibold w-40">
-                  {anime.title}
-                </span>
-              </div>
-            );
-          })}
+        <span className="text-sm md:text-base lg:text-lg font-semibold">
+          Today&apos;s Emitted
+        </span>
+        <div className="flex justify-center">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-4 justify-items-center">
+            {[...todaysAnimes, ...todaysAnimes, ...todaysAnimes].map(
+              (anime: InEmissionAnime) => {
+                return (
+                  <div
+                    className="flex flex-col justify-start items-center gap-y-2"
+                    key={anime.id}
+                  >
+                    <AspectRatio ratio={3 / 4}>
+                      <Link href={`/anime/${anime.id}`}>
+                        <Image
+                          src={anime.poster}
+                          title={anime.title}
+                          alt={anime.title}
+                          fill
+                          className="h-full w-full object-cover rounded-sm"
+                        />
+                      </Link>
+                    </AspectRatio>
+                    <span className="text-center text-sm font-semibold w-36">
+                      {anime.title}
+                    </span>
+                  </div>
+                );
+              }
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

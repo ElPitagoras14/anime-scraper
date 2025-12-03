@@ -1,7 +1,7 @@
 import time
-from psycopg2 import OperationalError
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import OperationalError
 from loguru import logger
 
 from .config import postgres_settings

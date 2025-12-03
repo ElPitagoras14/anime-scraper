@@ -1,9 +1,14 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
-export function ModeToggle() {
+interface ModeToggleProps {
+  className?: string;
+}
+
+export function ModeToggle({ className }: ModeToggleProps) {
   const { setTheme, theme } = useTheme();
 
   const toggle = () => {
@@ -12,7 +17,7 @@ export function ModeToggle() {
 
   return (
     <div
-      className="hover:bg-accent p-2 rounded-md cursor-pointer"
+      className={cn("hover:bg-accent p-2 rounded-md cursor-pointer", className)}
       onClick={toggle}
     >
       {theme === "light" ? (

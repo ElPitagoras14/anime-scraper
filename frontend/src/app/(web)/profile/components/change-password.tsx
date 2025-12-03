@@ -141,7 +141,7 @@ export default function ChangePassword() {
             ))}
           </form>
         </Form>
-        <DialogFooter className="flex justify-end gap-x-4">
+        <DialogFooter className="flex flex-row justify-end gap-x-4">
           <Button
             variant="outline"
             className="cursor-pointer"

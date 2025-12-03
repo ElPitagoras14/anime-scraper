@@ -15,6 +15,7 @@ import ActionsCell from "./actions-cell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "./pagination";
 import { PaginationState } from "@tanstack/react-table";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 interface DownloadTableProps {
   data: EpisodeDownload[];
@@ -72,19 +73,20 @@ export function DownloadTable({
               data?.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell>
-                    <div className="flex justify-center">
-                      <Link href={`/anime/${row.animeId}`}>
-                        <Image
-                          src={row.poster}
-                          alt={row.title}
-                          width={100}
-                          height={150}
-                          className="rounded-md"
-                        />
-                      </Link>
+                    <div className="flex justify-center max-w-32 mx-auto">
+                      <AspectRatio ratio={3 / 4}>
+                        <Link href={`/anime/${row.animeId}`}>
+                          <Image
+                            src={row.poster}
+                            alt={row.title}
+                            fill
+                            className="rounded-md object-cover"
+                          />
+                        </Link>
+                      </AspectRatio>
                     </div>
                   </TableCell>
-                  <TableCell className="text-base font-semibold">
+                  <TableCell className="text-sm md:text-base">
                     {row.title}
                   </TableCell>
                   <TableCell className="text-center">

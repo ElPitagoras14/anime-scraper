@@ -30,11 +30,11 @@ export default async function Page({ params }: PageProps) {
   const decoded = decodeURIComponent(query);
 
   return (
-    <div className="flex flex-col gap-y-10">
-      <span className="text-3xl font-semibold">
+    <div className="flex flex-col gap-y-4 lg:gap-y-10">
+      <span className="text-xl lg:text-3xl font-semibold">
         Search results for &quot;{decoded}&quot;
       </span>
-      <div className="flex flex-row flex-wrap gap-x-9 gap-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-2 gap-y-6 justify-items-center">
         {items.map((item: AnimeInfo) => (
           <AnimeCard key={item.id} animeInfo={item} />
         ))}

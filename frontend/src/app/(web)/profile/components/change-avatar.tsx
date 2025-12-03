@@ -81,7 +81,7 @@ export default function ChangeAvatar() {
 
   const items = data?.data?.payload.items || [];
 
-  const pageSize = 21;
+  const pageSize = 12;
   const pages: Avatar[][] = [];
 
   for (let i = 0; i < items.length; i++) {
@@ -103,7 +103,7 @@ export default function ChangeAvatar() {
       <AlertDialogTrigger asChild>
         <Button className="cursor-pointer">Change Avatar</Button>
       </AlertDialogTrigger>
-      <AlertDialogContent className="sm:max-w-none w-[70%] min-h-96">
+      <AlertDialogContent className="min-h-96 sm:max-w-none w-[95%] lg:w-[70%]">
         <AlertDialogHeader className="flex flex-row justify-between">
           <AlertDialogTitle>Change Avatar</AlertDialogTitle>
           <Button
@@ -112,17 +112,17 @@ export default function ChangeAvatar() {
             className="cursor-pointer"
             onClick={() => setIsOpen(false)}
           >
-            <XIcon className="w-6 h-6" />
+            <XIcon className="w-6 lg:w-12 h-6 lg:h-12" />
           </Button>
         </AlertDialogHeader>
-        <div className="flex flex-row gap-4 flex-wrap">
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-12 justify-items-center">
           {pages[page]?.map((avatar: Avatar) => {
             const firstTwoChars = avatar.label.slice(0, 2);
             return (
               <div
                 key={avatar.id}
                 className={cn(
-                  "bg-muted/20 rounded-full cursor-pointer opacity-85 w-32 h-32",
+                  "bg-muted/20 rounded-full cursor-pointer opacity-85",
                   avatarMutation.isPending
                     ? "opacity-50 cursor-not-allowed"
                     : "hover:opacity-100"
@@ -131,7 +131,7 @@ export default function ChangeAvatar() {
                   !avatarMutation.isPending && avatarMutation.mutate(avatar.id)
                 }
               >
-                <Avatar key={avatar.id} className="w-32 h-32 p-5">
+                <Avatar key={avatar.id} className="w-26 lg:w-30 h-26 lg:h-30 p-2 lg:p-5">
                   <AvatarImage src={avatar.url} alt={avatar.label} />
                   <AvatarFallback>
                     {firstTwoChars?.toUpperCase()}
@@ -141,7 +141,7 @@ export default function ChangeAvatar() {
             );
           })}
         </div>
-        <AlertDialogFooter className="flex justify-end gap-x-4">
+        <AlertDialogFooter className="flex flex-row justify-end gap-x-4">
           <Button
             variant="outline"
             size="icon"
