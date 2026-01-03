@@ -200,7 +200,7 @@ export default function Downloads() {
 
   return (
     <div className="flex flex-col gap-y-4">
-      <div className="flex flex-row lg:flex-col gap-y-4 justify-between">
+      <div className="flex flex-row lg:flex-col gap-y-4 justify-between items-center lg:items-start">
         <span className="text-xl md:text-2xl lg:text-3xl font-semibold">
           Downloads
         </span>
