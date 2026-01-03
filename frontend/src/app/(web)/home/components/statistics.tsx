@@ -42,7 +42,7 @@ export default function Statistics({ className }: StatisticsProps) {
             Statistics
           </span>
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton className="h-10 min-w-30 w-full" />
+            <Skeleton key={i} className="h-10 min-w-30 w-full" />
           ))}
         </CardContent>
       </Card>

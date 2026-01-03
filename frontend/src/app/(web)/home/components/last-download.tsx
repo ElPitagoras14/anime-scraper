@@ -52,7 +52,7 @@ export default function LastDownload({ role, className }: LastDownloadProps) {
             Last Downloaded
           </span>
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton className="h-12 lg:h-16 min-w-70 w-full" />
+            <Skeleton key={i} className="h-12 lg:h-16 min-w-70 w-full" />
           ))}
         </CardContent>
       </Card>

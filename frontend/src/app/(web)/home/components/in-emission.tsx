@@ -54,7 +54,7 @@ export default function InEmission({ className }: InEmissionProps) {
           </span>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-4 justify-items-center">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton className="h-46 w-32" />
+              <Skeleton key={i} className="h-46 w-32" />
             ))}
           </div>
         </CardContent>

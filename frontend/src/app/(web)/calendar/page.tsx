@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/table";
 import { getApiServer } from "@/lib/api-server";
 import CalendarAnimes from "./components/calendar-animes";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const weekDays = [
   "Monday",
