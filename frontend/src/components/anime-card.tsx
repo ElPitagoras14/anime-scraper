@@ -107,10 +107,10 @@ export default function AnimeCard({ animeInfo }: AnimeCardProps) {
 
   return (
     <div
-      className="flex flex-col gap-y-2 cursor-pointer"
+      className="flex flex-col gap-y-2 cursor-pointer items-center"
       onClick={() => router.push(`/anime/${animeInfo.id}`)}
     >
-      <div className="relative w-46 h-64">
+      <div className="relative w-38 sm:w-48 h-64">
         <Image
           src={animeInfo.poster}
           alt={animeInfo.title}

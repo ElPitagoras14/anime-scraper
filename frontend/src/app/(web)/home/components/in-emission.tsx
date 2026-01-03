@@ -68,23 +68,23 @@ export default function InEmission({ className }: InEmissionProps) {
         <span className="text-sm md:text-base lg:text-lg font-semibold">
           Today&apos;s Emitted
         </span>
-        <div className="flex justify-center">
+        <div className="flex flex-row justify-center">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-4 justify-items-center">
-            {[...todaysAnimes, ...todaysAnimes, ...todaysAnimes].map(
+            {todaysAnimes.map(
               (anime: InEmissionAnime) => {
                 return (
                   <div
                     className="flex flex-col justify-start items-center gap-y-2"
                     key={anime.id}
                   >
-                    <AspectRatio ratio={3 / 4}>
+                    <AspectRatio ratio={3 / 4} className="max-w-32 xl:max-w-34 mx-auto">
                       <Link href={`/anime/${anime.id}`}>
                         <Image
                           src={anime.poster}
                           title={anime.title}
                           alt={anime.title}
                           fill
-                          className="h-full w-full object-cover rounded-sm"
+                          className="object-cover rounded-sm"
                         />
                       </Link>
                     </AspectRatio>

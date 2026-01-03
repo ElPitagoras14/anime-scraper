@@ -48,9 +48,9 @@ export default function Page() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-2 gap-y-6 justify-items-center">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex flex-col gap-y-4">
-              <Skeleton className="w-46 sm:w-48 h-64 rounded-md" />
+              <Skeleton className="w-38 sm:w-48 h-64 rounded-md" />
               <div className="flex justify-center items-center">
-                <Skeleton className="w-46 sm:w-48 h-8" />
+                <Skeleton className="w-38 sm:w-48 h-8" />
               </div>
             </div>
           ))}
@@ -95,12 +95,12 @@ export default function Page() {
 
   return (
     <div className="flex flex-col gap-y-4">
-      <div className="flex flex-row lg:flex-col justify-between gap-y-2 lg:gap-y-4">
-        <span className="text-xl sm:text-2xl lg:text-3xl font-semibold">
+      <div className="flex flex-row lg:flex-col justify-between gap-y-2 lg:gap-y-4 items-center lg:items-start">
+        <span className="text-xl sm:text-2xl lg:text-3xl font-semibold text-wrap">
           Saved Animes
         </span>
         <div className="flex flex-col gap-y-8">
-          <div className="flex flex-row gap-x-4 items-center">
+          <div className="flex flex-row gap-x-2 lg:gap-x-4 items-center">
             <Select value={sortBy} onValueChange={(value) => setSortBy(value)}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Select a sort option" />

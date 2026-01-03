@@ -84,7 +84,7 @@ export default function Anime() {
     return () => clearInterval(interval);
   }, [anime]);
 
-  if (isLoading || !anime || minutesAgo === null || minutesToWait === null) {
+  if (!isLoading || !anime || minutesAgo === null || minutesToWait === null) {
     return (
       <>
         <div className="lg:hidden mb-4">
@@ -113,9 +113,9 @@ export default function Anime() {
               </div>
               <div className="flex flex-col gap-y-2">
                 <Skeleton className="w-56 h-10" />
-                <Skeleton className="w-96 h-12" />
-                <Skeleton className="w-96 h-12" />
-                <Skeleton className="w-96 h-12" />
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="w-full sm:w-96 h-10" />
+                ))}
               </div>
             </div>
           </div>
