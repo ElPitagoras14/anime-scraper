@@ -9,7 +9,7 @@ export default function WebLayout({
   return (
     <>
       <Navbar />
-      <main className="px-4 py-4 sm:px-12 sm:py-8">{children}</main>
+      <main className="px-4 py-4 sm:px-12 sm:py-8 mb-16">{children}</main>
       <FooterNavbar />
     </>
   );
