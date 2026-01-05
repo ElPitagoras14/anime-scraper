@@ -84,7 +84,7 @@ export default function Anime() {
     return () => clearInterval(interval);
   }, [anime]);
 
-  if (!isLoading || !anime || minutesAgo === null || minutesToWait === null) {
+  if (isLoading || !anime || minutesAgo === null || minutesToWait === null) {
     return (
       <>
         <div className="lg:hidden mb-4">
