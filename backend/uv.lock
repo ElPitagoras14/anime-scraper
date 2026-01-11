@@ -158,7 +158,7 @@ wheels = [
 
 [[package]]
 name = "ani-scrapy"
-version = "0.1.18"
+version = "0.1.22"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -171,9 +171,9 @@ dependencies = [
     { name = "playwright-stealth" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5d/45/e30de2132a2d190d90896f57802f7be34a114e7ea91b176313cb03c26ed9/ani_scrapy-0.1.18.tar.gz", hash = "sha256:f1f8d4b660b59f8bf79076a7996e22fb92f6c48feb1dc6168fbf47e1927aee15", size = 30543, upload-time = "2025-10-15T22:44:09.223Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/95/2b9a1b1a7efcd4fcd412e3ebe314c2aeb5bb93cefa16b2af80c75eab78c7/ani_scrapy-0.1.22.tar.gz", hash = "sha256:dbddbad45919f1d3f9f4e5c284504a56f6ed5113391335b6f86a602995f77fd7", size = 32120, upload-time = "2026-01-11T03:59:33.17Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/ca/69151e138145eb7f035e9d571108fefd590b7b2c1708b24858fdad0ce024/ani_scrapy-0.1.18-py3-none-any.whl", hash = "sha256:91d8d35a9fe0a20d5950ba3038a3b8883eb13ba00faee95385b9b96432fcadc2", size = 35557, upload-time = "2025-10-15T22:44:08.095Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/23/134be2e4498b3f3ca4ef2e492fc36a71a6e8051ef082c50691ec9ace951d/ani_scrapy-0.1.22-py3-none-any.whl", hash = "sha256:04d94bfa6015fe332e5392e0b02fc0c1e3746f01535acdde4fab08c14df217d9", size = 36385, upload-time = "2026-01-11T03:59:32.392Z" },
 ]
 
 [[package]]
@@ -309,7 +309,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ani-scrapy", specifier = "==0.1.18" },
+    { name = "ani-scrapy" },
     { name = "asyncpg", specifier = ">=0.31.0" },
     { name = "bcrypt", specifier = ">=4.0,<4.1" },
     { name = "celery", specifier = ">=5.5.3" },
