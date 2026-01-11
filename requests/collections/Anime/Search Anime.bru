@@ -1,0 +1,24 @@
+meta {
+  name: Search Anime
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{scraper-host}}/api/animes/search?query=mush
+  body: none
+  auth: bearer
+}
+
+params:query {
+  query: mush
+}
+
+auth:bearer {
+  token: {{auth-token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

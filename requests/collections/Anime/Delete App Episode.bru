@@ -1,0 +1,25 @@
+meta {
+  name: Delete App Episode
+  type: http
+  seq: 13
+}
+
+delete {
+  url: {{scraper-host}}/api/animes/download/single/{{anime-id}}/{{episode-number}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth-token}}
+}
+
+vars:pre-request {
+  anime-id: gachiakuta
+  episode-number: 6
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

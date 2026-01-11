@@ -182,7 +182,9 @@ async def save_anime(
     request.state.func = "save_anime"
     try:
         logger.info(f"Saving anime with id: {anime_id}")
-        status, _ = await save_anime_controller(anime_id, current_user["id"])
+        status, _ = await save_anime_controller(
+            anime_id, current_user["id"], request.state.request_id
+        )
 
         response.status_code = status
 

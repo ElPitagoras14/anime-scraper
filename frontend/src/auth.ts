@@ -100,11 +100,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
+      if (Date.now() >= token.data.validity.refreshUntil * 1000) {
+        return { ...token, error: "RefreshTokenExpired" } as JWT;
+      }
+
       if (Date.now() < token.data.validity.validUntil * 1000) {
+        console.log(
+          "AUTH: Valid token",
+          new Date(token.data.validity.validUntil * 1000).toLocaleString()
+        );
         return token;
       }
 
       if (Date.now() < token.data.validity.refreshUntil * 1000) {
+        console.log(
+          "AUTH: Refresh token",
+          new Date(token.data.validity.refreshUntil * 1000).toLocaleString()
+        );
         const refreshOptions = {
           method: "POST",
           url: `${API_URL}/api/auth/refresh`,
@@ -115,7 +127,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const response = await axios(refreshOptions);
         const newToken: BackendAccessJWT = response.data.payload;
         const { exp }: DecodedJWT = jwtDecode(newToken.access);
-        token.data.validity.validUntil = exp;
+        token.data.validity.validUntil = Math.min(
+          exp,
+          token.data.validity.refreshUntil
+        );
         token.data.tokens.access = newToken.access;
         return token;
       }

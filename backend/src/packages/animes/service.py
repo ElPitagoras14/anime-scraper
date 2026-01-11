@@ -1,5 +1,4 @@
 import asyncio
-import os
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from ani_scrapy.async_api import JKAnimeScraper
@@ -401,11 +400,22 @@ async def get_saved_animes_controller(user_id: str) -> tuple[int, dict]:
 
 
 async def save_anime_controller(
-    anime_id: str, user_id: str
+    anime_id: str, user_id: str, request_id: str
 ) -> tuple[int, str]:
     logger.debug(f"Saving anime with id: {anime_id}")
     base_url = f"https://jkanime.net/{anime_id}"
     async with AsyncDatabaseSession() as db:
+        stmt = select(UserSaveAnime).where(
+            UserSaveAnime.user_id == user_id,
+            UserSaveAnime.anime_id == anime_id,
+        )
+        result = await db.execute(stmt)
+        saved_anime = result.scalar()
+        if saved_anime:
+            raise ConflictException(
+                "Anime already saved", request_id=request_id
+            )
+
         stmt = (
             select(Anime)
             .where(Anime.id == anime_id)
@@ -638,7 +648,7 @@ async def get_download_episode_controller(episode_id: int) -> tuple[int, dict]:
             anime_folder = (
                 ANIMES_FOLDER / franchise_id / f"Season {parsed_season}"
             )
-        if not os.path.exists(anime_folder):
+        if not anime_folder.exists():
             return status.HTTP_404_NOT_FOUND, "Episode not found"
 
         parsed_ep_number = str(episode.ep_number).zfill(2)
@@ -771,8 +781,8 @@ async def delete_download_episode_controller(
                 anime_folder
                 / f"{episode.anime_id} - S{parsed_season}E{ep_number}.mp4"
             )
-            if os.path.exists(file_path):
-                os.remove(file_path)
+            if file_path.exists():
+                file_path.unlink()
 
         logger.debug(f"Deleted download episode with id: {episode_id}")
 

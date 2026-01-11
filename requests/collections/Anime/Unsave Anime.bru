@@ -1,0 +1,24 @@
+meta {
+  name: Unsave Anime
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{scraper-host}}/api/animes/unsave/{{anime-id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth-token}}
+}
+
+vars:pre-request {
+  anime-id: gachiakuta
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

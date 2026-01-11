@@ -11,29 +11,36 @@ export default auth(async (req) => {
     req,
     secret: AUTH_SECRET,
   });
-  const baseUrl = req.nextUrl.origin;
 
-  if (unprotectedPaths.includes(req.nextUrl.pathname) && !token) {
+  const { pathname } = req.nextUrl;
+  const baseUrl = req.nextUrl.origin;
+  const username = token?.data?.user?.username;
+
+  const isAuthenticated = token && token.error !== "RefreshTokenExpired";
+
+  if (unprotectedPaths.includes(pathname) && !isAuthenticated) {
+    console.log(`[MIDDLEWARE] [${username}] Unprotected path ${pathname}`);
     return NextResponse.next();
   }
 
-  if (!token) {
-    return NextResponse.redirect(`${baseUrl}/login`);
-  }
+  if (["/login", "/register"].includes(pathname)) {
+    if (!isAuthenticated) {
+      console.log(
+        `[MIDDLEWARE] [${username}] No auth user in ${pathname}, allow the path`
+      );
+      return NextResponse.next();
+    }
 
-  if (token && Date.now() >= token.data.validity.refreshUntil * 1000) {
-    const response = NextResponse.redirect(`${baseUrl}/login`);
-    response.cookies.set("next-auth.session-token", "", { maxAge: 0 });
-    response.cookies.set("next-auth.csrf-token", "", { maxAge: 0 });
-
-    return response;
-  }
-
-  if (["/login", "/register"].includes(req.nextUrl.pathname)) {
+    console.log(`[MIDDLEWARE] [${username}] Auth user redirecting to home`);
     return NextResponse.redirect(`${baseUrl}/home`);
   }
 
-  // If authenticated, continue with the request
+  if (!isAuthenticated) {
+    console.log(`[MIDDLEWARE] [${username}] No auth user redirecting to login`);
+    return NextResponse.redirect(`${baseUrl}/login`);
+  }
+
+  console.log(`[MIDDLEWARE] [${username}] Auth user allowing the path`);
   return NextResponse.next();
 });
 

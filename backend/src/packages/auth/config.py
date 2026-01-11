@@ -7,7 +7,7 @@ class AuthSettings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str
     ACCESS_TOKEN_EXP_MIN: int
-    REFRESH_TOKEN_EXP_DAY: int
+    REFRESH_TOKEN_EXP_DAY: float
 
     model_config = SettingsConfigDict(
         env_file=find_dotenv(filename=".env", usecwd=True),

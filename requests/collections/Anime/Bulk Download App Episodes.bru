@@ -1,0 +1,31 @@
+meta {
+  name: Bulk Download App Episodes
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{scraper-host}}/api/animes/download/bulk/{{anime-id}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth-token}}
+}
+
+body:json {
+  [
+    1,
+    2
+  ]
+}
+
+vars:pre-request {
+  anime-id: gachiakuta
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

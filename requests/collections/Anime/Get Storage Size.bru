@@ -1,0 +1,20 @@
+meta {
+  name: Get Storage Size
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{scraper-host}}/api/animes/storage
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth-token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,26 @@
+meta {
+  name: Get Downloaded Episodes
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{scraper-host}}/api/animes/download
+  body: none
+  auth: bearer
+}
+
+params:query {
+  ~anime_id: gachiakuta
+  ~limit: 10
+  ~page: 1
+}
+
+auth:bearer {
+  token: {{auth-token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Get Downloaded Animes
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{scraper-host}}/api/animes/download/anime
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth-token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
