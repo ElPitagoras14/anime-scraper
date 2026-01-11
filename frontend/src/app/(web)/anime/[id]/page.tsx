@@ -74,8 +74,8 @@ export default function Anime() {
     if (!anime) return;
 
     const updateTimes = () => {
-      setMinutesAgo(getMinutesAgo(new Date(anime.lastScrapedAt)));
-      setMinutesToWait(5 - getMinutesAgo(new Date(anime.lastForcedUpdate)));
+      setMinutesAgo(Math.max(0, getMinutesAgo(new Date(anime.lastScrapedAt))));
+      setMinutesToWait(3 - getMinutesAgo(new Date(anime.lastForcedUpdate)));
     };
 
     updateTimes();
@@ -130,7 +130,9 @@ export default function Anime() {
       <div className="flex flex-col col-span-1 lg:col-span-2 xl:col-span-3 gap-y-4">
         <div className="flex flex-row justify-between">
           <div className="flex flex-col gap-y-1">
-            <span className="text-xl md:text-2xl lg:text-3xl font-semibold">{anime.title}</span>
+            <span className="text-xl md:text-2xl lg:text-3xl font-semibold">
+              {anime.title}
+            </span>
             <span className="text-sm text-muted-foreground">
               Last update {minutesAgo} minutes ago
             </span>

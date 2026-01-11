@@ -1,0 +1,23 @@
+meta {
+  name: Register
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{scraper-host}}/api/auth/register
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "username": "user-1",
+    "password": "12345678"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

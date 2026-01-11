@@ -1,0 +1,20 @@
+meta {
+  name: Get Saved Animes
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{scraper-host}}/api/animes/saved
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth-token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

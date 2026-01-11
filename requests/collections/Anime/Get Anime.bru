@@ -1,0 +1,32 @@
+meta {
+  name: Get Anime
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{scraper-host}}/api/animes/info/{{anime-id}}
+  body: none
+  auth: bearer
+}
+
+params:query {
+  ~force_update: True
+}
+
+headers {
+  : {{authToken}}
+}
+
+auth:bearer {
+  token: {{auth-token}}
+}
+
+vars:pre-request {
+  anime-id: spy-x-family-season-3
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

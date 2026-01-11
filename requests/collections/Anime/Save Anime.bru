@@ -1,0 +1,24 @@
+meta {
+  name: Save Anime
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{scraper-host}}/api/animes/save/{{anime-id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth-token}}
+}
+
+vars:pre-request {
+  anime-id: gachiakuta
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

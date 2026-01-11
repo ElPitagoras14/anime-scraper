@@ -1,0 +1,31 @@
+meta {
+  name: Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{scraper-host}}/api/auth/login
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "username": "",
+    "password": ""
+  }
+}
+
+vars:post-response {
+  authToken: res.body.payload.access
+}
+
+script:post-response {
+  bru.setGlobalEnvVar("auth-token", res.body.payload.access)
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

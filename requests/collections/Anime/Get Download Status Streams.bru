@@ -1,0 +1,20 @@
+meta {
+  name: Get Download Status Streams
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{scraper-host}}/api/animes/stream/download?job_ids=33878e62-aa35-48fe-a25a-9ade9e8cbd28
+  body: none
+  auth: inherit
+}
+
+params:query {
+  job_ids: 33878e62-aa35-48fe-a25a-9ade9e8cbd28
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
