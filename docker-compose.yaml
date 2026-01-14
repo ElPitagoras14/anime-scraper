@@ -68,6 +68,9 @@ services:
         condition: service_healthy
     container_name: "${COMPOSE_PROJECT_NAME}-api"
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
   celery-worker:
     build:
@@ -91,6 +94,9 @@ services:
         condition: service_healthy
     container_name: "${COMPOSE_PROJECT_NAME}-celery"
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
   flower:
     image: mher/flower
